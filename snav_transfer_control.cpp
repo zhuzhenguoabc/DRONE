@@ -673,14 +673,6 @@ void* handler(void* arg)
 	// Begin loop
 	while (true)
 	{
-		/*
-		if (loop_counter%300 == 0)	//100---2s
-		{
-			//printf("handler running!\n");
-			//fflush(stdout);
-		}
-		*/
-
 		int length = 0;
 		struct sockaddr_in remote_addr;
 		int sin_size;
@@ -915,9 +907,16 @@ void* handler(void* arg)
 						}
 						else /*Other tcp task*/
 						{
+							memset(result_to_client,0,MAX_BUFF_LEN);
+
+							/*
+							sprintf(result_to_client,"ignore tcp task(%s) when received udp control command!",tcp_receive_data);
+							memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
+							*/
+
+							//tcp 8001 task for get status and data information when udp control
 							if ((gpsparams_tcp.size() >= 1) && (gpsparams_tcp[0].compare(SNAV_TASK_GET_INFO) == 0))
 							{
-								memset(result_to_client,0,MAX_BUFF_LEN);
 								sprintf(result_to_client,"%s",SNAV_TASK_GET_INFO_RESULT);
 
 								char battery_info[MAX_BUFF_LEN];
@@ -1005,7 +1004,6 @@ void* handler(void* arg)
 							}
 							else
 							{
-								memset(result_to_client,0,MAX_BUFF_LEN);
 								sprintf(result_to_client,"ignore tcp task(%s) when received udp control command!",tcp_receive_data);
 								memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
 							}
@@ -1695,7 +1693,6 @@ void* handler(void* arg)
 				followme_mission = false;
 			}
 
-
 			// Rotate velocity by estimated yaw angle before sending
 			// This puts velocity in body-relative Z-up frame
 			float x_vel_des_yawed = x_vel_des*cos(-yaw_est) - y_vel_des*sin(-yaw_est);
@@ -1781,6 +1778,114 @@ void* handler(void* arg)
 			static double t_start = 0;
 			//printf("[%d] last comand time: %f\n",loop_counter,(t_now - t_start));
 			t_start = t_now;
+
+			//tcp 8001 task for get status and data information when tcp task
+			if (bLocalTcpFlag)
+			{
+				pthread_mutex_lock(&pro_tcp_send.lock);
+
+				//set the flag and data for the handler-thread check
+				pro_tcp_send.bflag = true;
+				pro_tcp_send.fd_socket = localTcpFd;
+				memset(pro_tcp_send.data,0,MAX_BUFF_LEN);
+
+				if ((gpsparams_tcp.size() >= 1) && (gpsparams_tcp[0].compare(SNAV_TASK_GET_INFO) == 0))
+				{
+					memset(result_to_client,0,MAX_BUFF_LEN);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_INFO_RESULT);
+
+					char battery_info[MAX_BUFF_LEN];
+					char rpm_info[MAX_BUFF_LEN];
+					char sonar_info[MAX_BUFF_LEN];
+					char gps_info[MAX_BUFF_LEN];
+					char xyz_info[MAX_BUFF_LEN];
+					char rpy_info[MAX_BUFF_LEN];
+					char state_info[MAX_BUFF_LEN];
+
+					memset(battery_info,0,MAX_BUFF_LEN);
+					memset(rpm_info,0,MAX_BUFF_LEN);
+					memset(sonar_info,0,MAX_BUFF_LEN);
+					memset(gps_info,0,MAX_BUFF_LEN);
+					memset(xyz_info,0,MAX_BUFF_LEN);
+					memset(rpy_info,0,MAX_BUFF_LEN);
+					memset(state_info,0,MAX_BUFF_LEN);
+
+
+					sprintf(battery_info,"battery_info:%f",snav_data->general_status.voltage);
+					printf("battery_info=%s\n",battery_info);
+
+
+					sprintf(rpm_info,"rpm_info:%d:%d:%d:%d",snav_data->esc_raw.rpm[0], snav_data->esc_raw.rpm[1]
+															   ,snav_data->esc_raw.rpm[2], snav_data->esc_raw.rpm[3]);
+					printf("rpm_info=%s\n",rpm_info);
+
+					sprintf(sonar_info,"sonar_info:%f",snav_data->sonar_0_raw.range);
+					printf("sonar_info=%s\n",sonar_info);
+
+
+					int gps_enabled;
+					sn_is_gps_enabled(&gps_enabled);
+
+					if(gps_enabled != 1)
+					{
+						sprintf(gps_info, "gps_info:gps is not enabled!");
+					}
+					else
+					{
+						SnDataStatus gps_status = (SnDataStatus) snav_data->data_status.gps_0_status;
+						if (gps_status != SN_DATA_VALID)
+						{
+							sprintf(gps_info, "gps_info:can not get gps location!");
+						}
+						else
+						{
+							sprintf(gps_info, "gps_info:%d:%d",snav_data->gps_0_raw.longitude, snav_data->gps_0_raw.latitude);
+						}
+					}
+					printf("gps_info=%s\n",gps_info);
+
+					sprintf(xyz_info, "xyz_info:%f:%f:%f",snav_data->high_level_control_data.position_estimated[0]
+														 ,snav_data->high_level_control_data.position_estimated[1]
+														 ,snav_data->high_level_control_data.position_estimated[2]);
+					printf("xyz_info=%s\n",xyz_info);
+
+					sprintf(rpy_info, "rpy_info:%f:%f:%f",snav_data->attitude_estimate.roll
+														 ,snav_data->attitude_estimate.pitch
+														 ,snav_data->attitude_estimate.yaw);
+					printf("rpy_info=%s\n",rpy_info);
+
+					sprintf(state_info, "state_info:%d",state);
+					printf("state_info=%s\n",state_info);
+
+
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, battery_info);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, rpm_info);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, sonar_info);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, gps_info);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, xyz_info);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, rpy_info);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, state_info);
+
+					printf("rpy_info=%s\n",result_to_client);
+
+					memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
+				}
+				else
+				{
+					memcpy(pro_tcp_send.data, tcp_receive_data, MAX_BUFF_LEN);
+				}
+
+				pthread_mutex_unlock(&pro_tcp_send.lock);
+
+				bLocalTcpFlag = false;
+			}
 		}
 		loop_counter++;
 		//usleep(20000);
