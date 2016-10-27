@@ -120,6 +120,20 @@ enum class MissionState
   TRAJECTORY_FOLLOW
 };
 
+// States of Drone
+enum class DroneState
+{
+  NORMAL,
+  MOTOR_ERROR,
+  CPU_OVER_HEAT,
+  IMU_ERROR,
+  BARO_ERROR,
+  MAG_ERROR,
+  GPS_ERROR,
+  SONAR_ERROR,
+  OPTIC_FLOW_ERROR
+};
+
 struct Position
 {
   float x;   // m
@@ -160,7 +174,7 @@ struct prodcons pro_udp_receive;
 
 
 struct timeval timeout_tcp = {SOCKET_OVER_TIME,0};
-struct timeval timeout_udp = {0,50000};
+struct timeval timeout_udp = {0,300000};
 
 
 std::vector<std::string> split(const  std::string& s, const std::string& delim)
@@ -633,11 +647,14 @@ void* handler(void* arg)
 	//circle fly
 	std::vector<Position> circle_positions;
 	float radius = 2.5f;//meter
+
 	float vel_target = 0.75;	 //m/sec
 	int point_count = 72;
 	float angle_per = 2*M_PI/point_count;
+
 	int clockwise= 1;// anticlockwise = -1
 
+	DroneState drone_state = DroneState::NORMAL;
 	MissionState state = MissionState::UNKNOWN;
 	int loop_counter = 0;
 
@@ -669,7 +686,6 @@ void* handler(void* arg)
 	setsockopt(server_udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout_udp, sizeof(struct timeval));
 	setsockopt(server_udp_sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout_udp, sizeof(struct timeval));
 
-
 	// Begin loop
 	while (true)
 	{
@@ -677,11 +693,14 @@ void* handler(void* arg)
 		struct sockaddr_in remote_addr;
 		int sin_size;
 	    char udp_buff_data[MAX_BUFF_LEN];
+		char last_udp_buff_data[MAX_BUFF_LEN];
 
 		sin_size=sizeof(struct sockaddr_in);
 
 		//receive the udp data
-		if ((length=recvfrom(server_udp_sockfd,udp_buff_data,MAX_BUFF_LEN,0, (struct sockaddr *)&remote_addr,(socklen_t*)&sin_size))>0)
+		length=recvfrom(server_udp_sockfd,udp_buff_data,MAX_BUFF_LEN-1,0, (struct sockaddr *)&remote_addr,(socklen_t*)&sin_size);
+
+		if (length>0)
 		{
 			struct timeval time_val;
 			gettimeofday(&time_val, NULL);
@@ -767,6 +786,64 @@ void* handler(void* arg)
 			float voltage;
 			voltage = (float)snav_data->general_status.voltage;
 
+			//check the drone status
+			drone_state = DroneState::NORMAL;
+
+			CpuStats cpu_status = snav_data->cpu_stats;
+			for(int j = 0; j < 10; j++)
+			{
+				if (cpu_status.temp[j] >= 78)
+				{
+					drone_state = DroneState::CPU_OVER_HEAT;
+				}
+				break;
+			}
+
+			if (props_state == SN_PROPS_STATE_UNKNOWN)
+			{
+				drone_state = DroneState::MOTOR_ERROR;
+			}
+
+			SnDataStatus imu_status = (SnDataStatus) snav_data->data_status.imu_0_status;
+			SnDataStatus baro_status = (SnDataStatus) snav_data->data_status.baro_0_status;
+			SnDataStatus mag_status = (SnDataStatus) snav_data->data_status.mag_0_status;
+			SnDataStatus gps_status = (SnDataStatus) snav_data->data_status.gps_0_status;
+			SnDataStatus sonar_status = (SnDataStatus) snav_data->data_status.sonar_0_status;
+			SnDataStatus optic_flow_status = (SnDataStatus) snav_data->data_status.optic_flow_0_status;
+
+			/*
+			if (mag_status != SN_DATA_VALID)
+			{
+				drone_state = DroneState::MAG_ERROR;
+			}
+
+			if (gps_status != SN_DATA_VALID)
+			{
+				drone_state = DroneState::GPS_ERROR;
+			}
+
+			if (baro_status != SN_DATA_VALID)
+			{
+				drone_state = DroneState::BARO_ERROR;
+			}
+			*/
+
+			if (sonar_status != SN_DATA_VALID)
+			{
+				drone_state = DroneState::SONAR_ERROR;
+			}
+
+			if (optic_flow_status != SN_DATA_VALID)
+			{
+				drone_state = DroneState::OPTIC_FLOW_ERROR;
+			}
+
+			if (imu_status != SN_DATA_VALID)
+			{
+				drone_state = DroneState::IMU_ERROR;
+			}
+			//check end
+
 			std::string recv_tcp_cmd, recv_udp_cmd;
 			std::vector<std::string> gpsparams_tcp, gpsparams_udp;
 
@@ -790,8 +867,8 @@ void* handler(void* arg)
 			printf("task_take_off_in_progress:%d\n",task_take_off_in_progress);
 
 			//udp control operation
-			if (!task_take_off_in_progress
-				&& bLocalUdpFlag
+			if (/*!task_take_off_in_progress
+				&& */bLocalUdpFlag
 				&& (gpsparams_udp.size() >= 6)
 				&& (gpsparams_udp[0].compare(SNAV_CMD_CONROL)==0))
 			{
@@ -925,7 +1002,8 @@ void* handler(void* arg)
 								char gps_info[MAX_BUFF_LEN];
 								char xyz_info[MAX_BUFF_LEN];
 								char rpy_info[MAX_BUFF_LEN];
-								char state_info[MAX_BUFF_LEN];
+								char flight_state_info[MAX_BUFF_LEN];
+								char drone_state_info[MAX_BUFF_LEN];
 
 								memset(battery_info,0,MAX_BUFF_LEN);
 								memset(rpm_info,0,MAX_BUFF_LEN);
@@ -933,7 +1011,8 @@ void* handler(void* arg)
 								memset(gps_info,0,MAX_BUFF_LEN);
 								memset(xyz_info,0,MAX_BUFF_LEN);
 								memset(rpy_info,0,MAX_BUFF_LEN);
-								memset(state_info,0,MAX_BUFF_LEN);
+								memset(flight_state_info,0,MAX_BUFF_LEN);
+								memset(drone_state_info,0,MAX_BUFF_LEN);
 
 
 								sprintf(battery_info,"battery_info:%f",snav_data->general_status.voltage);
@@ -979,8 +1058,11 @@ void* handler(void* arg)
 																	 ,snav_data->attitude_estimate.yaw);
 								printf("rpy_info=%s\n",rpy_info);
 
-								sprintf(state_info, "state_info:%d",state);
-								printf("state_info=%s\n",state_info);
+								sprintf(flight_state_info, "flight_state_info:%d",state);
+								printf("flight_state_info=%s\n",flight_state_info);
+
+								sprintf(drone_state_info, "drone_state_info:%d",drone_state);
+								printf("drone_state_info=%s\n",drone_state_info);
 
 
 								strcat(result_to_client, STR_SEPARATOR);
@@ -996,7 +1078,9 @@ void* handler(void* arg)
 								strcat(result_to_client, STR_SEPARATOR);
 								strcat(result_to_client, rpy_info);
 								strcat(result_to_client, STR_SEPARATOR);
-								strcat(result_to_client, state_info);
+								strcat(result_to_client, flight_state_info);
+								strcat(result_to_client, STR_SEPARATOR);
+								strcat(result_to_client, drone_state_info);
 
 								printf("rpy_info=%s\n",result_to_client);
 
@@ -1207,6 +1291,9 @@ void* handler(void* arg)
 			}
 			else if (state == MissionState::TAKEOFF)
 			{
+				//system("ps -e |grep qcamvid |awk '{print $1}'| xargs kill -9");
+				//system("/usr/bin/qcamvid");
+
 				if(gpsparams_tcp.size() >= 1 && (gpsparams_tcp[0].compare(SNAV_CMD_LAND) ==0))
 				{
 					state = MissionState::LANDING;
@@ -1255,11 +1342,13 @@ void* handler(void* arg)
 					if (props_state == SN_PROPS_STATE_NOT_SPINNING)
 					{
 						state = MissionState::ON_GROUND;
+						//system("ps -e |grep qcamvid |awk '{print $1}'| xargs kill -9");
 					}
 				}
 				else
 				{
 					state = MissionState::ON_GROUND;
+					//system("ps -e |grep qcamvid |awk '{print $1}'| xargs kill -9");
 
 					circle_misson=false;
 					calcCirclePoint = false;
@@ -1351,6 +1440,10 @@ void* handler(void* arg)
 					command_diff_z = circle_positions[current_position].z - (z_des-z_est_startup);
 					command_diff_yaw = circle_positions[current_position].yaw - yaw_des;
 
+
+					printf("[%d] [circle_misson x_des y_des z_des]: [%f %f %f]\n",
+							loop_counter,x_des,y_des,z_des);
+
 					if (command_diff_yaw > M_PI)
 					{
 						command_diff_yaw = command_diff_yaw - 2*M_PI;
@@ -1388,6 +1481,9 @@ void* handler(void* arg)
 					vel_y_target = command_diff_y/distance_to_dest * vel_target;
 					vel_z_target = command_diff_z/distance_to_dest * vel_target;
 					vel_yaw_target = command_diff_yaw/angle_per*vel_target;
+
+					printf("[%d] [circle_misson vel_x_target vel_y_target vel_z_target vel_yaw_target]: [%f %f %f %f]\n",
+							loop_counter,vel_x_target,vel_y_target,vel_z_target,vel_yaw_target);
 
 					printf("[%d] [distance_to_dest command_diff_x command_diff_y command_diff_z command_diff_yaw]: [%f %f %f %f %f]\n",
 							loop_counter,distance_to_dest,command_diff_x,command_diff_y,command_diff_z,command_diff_yaw);
@@ -1464,6 +1560,9 @@ void* handler(void* arg)
 				float vel_z_diff = (vel_z_target - vel_z_des_sent);
 				float vel_yaw_diff = (vel_yaw_target - vel_yaw_des_sent);
 
+				printf("[%d] [vel_x_diff,vel_y_diff,vel_z_diff,vel_yaw_diff]: [%f,%f,%f,%f] \n",
+									loop_counter,vel_x_diff,vel_y_diff,vel_z_diff,vel_yaw_diff);
+
 				float vel_diff_mag = sqrt(vel_x_diff*vel_x_diff +
 				                  vel_y_diff*vel_y_diff +
 				                  vel_z_diff*vel_z_diff);
@@ -1539,9 +1638,26 @@ void* handler(void* arg)
 						calcCirclePoint = true;
 						/*kDesTakeoffAlt = atof(gpsparams_tcp[1].c_str());*/
 						radius = atof(gpsparams_tcp[1].c_str());	//2
-						vel_target = atof(gpsparams_tcp[2].c_str());	//3
+						/*vel_target = atof(gpsparams_tcp[2].c_str());	//3
 						printf("LOITER circle: kDesTakeoffAlt,radius,vel_target:%f,%f,%f\n",
-								kDesTakeoffAlt,radius,vel_target);
+								kDesTakeoffAlt,radius,vel_target);*/
+
+						if (radius < 1)
+						{
+							point_count = 36;
+							vel_target = 0.5;	 //m/sec
+						}
+						else
+						{
+							point_count = (int)(radius*36);
+							vel_target = 0.5*radius;	 //m/sec
+						}
+
+						angle_per = 2*M_PI/point_count;
+
+						printf("LOITER circle: radius,point_count,vel_target,angle_per:%f,%d,%f,%f\n",
+								radius,point_count,vel_target,angle_per);
+
 					}
 
 					if(gpsparams_tcp.size() >= 1 && (gpsparams_tcp[0].compare(SNAV_CMD_LAND) ==0))
@@ -1631,7 +1747,7 @@ void* handler(void* arg)
 								printf("@@@@circle_center_point [%f,%f]\n",
 										circle_center_x,circle_center_y);
 
-								for(int k=0;k<=circle_positions.size();k++)
+								for(int k=0;k<circle_positions.size();k++)
 								{
 									printf("@@@@[%d] position #%u: [%f,%f,%f,%f]\n",k,
 										k,circle_positions[k].x,circle_positions[k].y,
@@ -1800,7 +1916,8 @@ void* handler(void* arg)
 					char gps_info[MAX_BUFF_LEN];
 					char xyz_info[MAX_BUFF_LEN];
 					char rpy_info[MAX_BUFF_LEN];
-					char state_info[MAX_BUFF_LEN];
+					char flight_state_info[MAX_BUFF_LEN];
+					char drone_state_info[MAX_BUFF_LEN];
 
 					memset(battery_info,0,MAX_BUFF_LEN);
 					memset(rpm_info,0,MAX_BUFF_LEN);
@@ -1808,7 +1925,8 @@ void* handler(void* arg)
 					memset(gps_info,0,MAX_BUFF_LEN);
 					memset(xyz_info,0,MAX_BUFF_LEN);
 					memset(rpy_info,0,MAX_BUFF_LEN);
-					memset(state_info,0,MAX_BUFF_LEN);
+					memset(flight_state_info,0,MAX_BUFF_LEN);
+					memset(drone_state_info,0,MAX_BUFF_LEN);
 
 
 					sprintf(battery_info,"battery_info:%f",snav_data->general_status.voltage);
@@ -1854,9 +1972,11 @@ void* handler(void* arg)
 														 ,snav_data->attitude_estimate.yaw);
 					printf("rpy_info=%s\n",rpy_info);
 
-					sprintf(state_info, "state_info:%d",state);
-					printf("state_info=%s\n",state_info);
+					sprintf(flight_state_info, "flight_state_info:%d",state);
+					printf("flight_state_info=%s\n",flight_state_info);
 
+					sprintf(drone_state_info, "drone_state_info:%d",drone_state);
+					printf("drone_state_info=%s\n",drone_state_info);
 
 					strcat(result_to_client, STR_SEPARATOR);
 					strcat(result_to_client, battery_info);
@@ -1871,7 +1991,9 @@ void* handler(void* arg)
 					strcat(result_to_client, STR_SEPARATOR);
 					strcat(result_to_client, rpy_info);
 					strcat(result_to_client, STR_SEPARATOR);
-					strcat(result_to_client, state_info);
+					strcat(result_to_client, flight_state_info);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, drone_state_info);
 
 					printf("rpy_info=%s\n",result_to_client);
 
