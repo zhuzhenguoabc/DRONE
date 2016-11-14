@@ -1696,7 +1696,7 @@ void* handler(void* arg)
 								float yaw_t =0;
 
 								circle_center_x = x_est-x_est_startup + radius*cos(yaw_est);
-								circle_center_y = y_est-yaw_est_startup + radius*sin(yaw_est);
+								circle_center_y = y_est-y_est_startup + radius*sin(yaw_est);
 
 								circle_positions.clear();//clear and recaculate.
 								for(int k=0;k<point_count;k++)

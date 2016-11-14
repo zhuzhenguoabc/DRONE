@@ -8,6 +8,15 @@
 // define a constraining macro for ease of use
 #define MIN(var_min,var1,var2) {if ((var1) <= (var2)) var_min = var1;else if ((var1) > (var2)) var_min = var2;}
 
+#define __DEBUG
+
+#ifdef __DEBUG
+#define DEBUG(format, ...) printf(format, ##__VA_ARGS__)
+#else
+#define DEBUG(format,...)
+#endif
+
+
 // States used to control mission
 enum class GoHomeState
 {
@@ -70,8 +79,12 @@ int goto_waypoint(FlatVars input_state, FlatVars goal_state, FlatVars last_comma
   // get current time
   struct timeval tv; gettimeofday(&tv, NULL);
   uint64_t t_now = (uint64_t) tv.tv_sec*1000000 + tv.tv_usec;
+
   // compute change in time from last function call. This function assumes relatively uniform dt
   float dt = (t_now-t_prev)/1000000.0;
+
+  DEBUG("goto_waypoint t_now, t_prev, dt:[%llu,%llu,%llu,%f]\n", t_now,t_prev,(t_now-t_prev),dt);
+
   // bound dt
   if (dt<.001){dt=.001;}
   else if (dt>.1){initialized = 0;dt = 0.1;}
@@ -84,6 +97,8 @@ int goto_waypoint(FlatVars input_state, FlatVars goal_state, FlatVars last_comma
     memcpy(&previous_goal_state,&goal_state,sizeof(FlatVars));
     memcpy(&previous_desired_velocity,&last_commanded_world_velocity,sizeof(FlatVars));
     initialized=1;
+
+	DEBUG("goto_waypoint return -1\n");
     return -1;
   }
 
@@ -184,15 +199,21 @@ int goto_waypoint(FlatVars input_state, FlatVars goal_state, FlatVars last_comma
   // compute change in velocity required to reach desired yaw rate and it's magnitude
   float des_vel_change_yaw = yaw_rate_direction*des_ang_velocity-last_commanded_world_velocity.yaw;
 
+  DEBUG("des_vel_change_yaw yaw:[%f]\n",des_vel_change_yaw);
+
   // compute direction to acclerate in in yaw
   float yaw_acceleration_direction = 0;
   if(des_vel_change_yaw<-0.0001){yaw_acceleration_direction = -1;}
   if(des_vel_change_yaw>0.0001){yaw_acceleration_direction = 1;}
 
+  DEBUG("des_vel_change_yaw,yaw_acceleration_direction:[%f,%f]\n",des_vel_change_yaw,yaw_acceleration_direction);
+
   // compute yaw acceleration to use
   float accel_applied_yaw = yaw_acceleration_direction*max_ang_acceleration;
   // increment commanded angular velocity by desired accleration*dt
   current_cmd_world_velocity.yaw = last_commanded_world_velocity.yaw + accel_applied_yaw*dt;
+
+  DEBUG("last_commanded_world_velocity,accel_applied_yaw:[%f,%f]\n",last_commanded_world_velocity.yaw, accel_applied_yaw);
 
   // bound maximum yaw rate
   current_cmd_world_velocity.yaw = constrain_min_max(current_cmd_world_velocity.yaw,-max_ang_velocity,max_ang_velocity);
@@ -204,6 +225,8 @@ int goto_waypoint(FlatVars input_state, FlatVars goal_state, FlatVars last_comma
     reached_orientation = true;
   }
 
+  DEBUG("reached_pos, reached_orientation:[%d,%d]\n",reached_pos, reached_orientation);
+
   // *********************************************************
   // ***** Check goal conditions and set output velocity *****
   // *********************************************************
@@ -214,6 +237,9 @@ int goto_waypoint(FlatVars input_state, FlatVars goal_state, FlatVars last_comma
   cmd_out->y = current_cmd_world_velocity.y;
   cmd_out->z = current_cmd_world_velocity.z;
   cmd_out->yaw = current_cmd_world_velocity.yaw;
+
+
+  DEBUG("current_cmd_world_velocity final yaw:[%f]\n",current_cmd_world_velocity.yaw);
 
   // Save previous velocity to check for reset
   memcpy(&previous_desired_velocity,&current_cmd_world_velocity,sizeof(FlatVars));
