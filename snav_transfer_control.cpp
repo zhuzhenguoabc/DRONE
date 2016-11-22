@@ -19,6 +19,7 @@
 #include <pthread.h>
 #include <string>
 #include <sys/un.h>
+#include <stddef.h>
 
 // Waypoint utilities
 #include "snav_waypoint_utils.hpp"
@@ -49,74 +50,39 @@ using namespace std;
 #define MAX_BUFF_LEN 512
 #define HEADER_BUFF_LENGTH 4
 
+#define MIN_GPS_POSITION_NUM 2
+#define MAX_GPS_POSITION_NUM 10
+
 #define STR_SEPARATOR  ","
 
-#define HEART_BEAT_OVER_COUNT 6
+#define HEART_BEAT_OVER_COUNT 3	//6
 #define SNAV_HEART_BEAT "heartbeat"
 
-#define SNAV_TASK_SUCCEED 1
-#define SNAV_TASK_FAILED 2
+#define SNAV_CMD_CONROL					"1000"
 
-#define SNAV_CMD_CONROL "1000"
+#define SNAV_CMD_TAKE_OFF				"1001"
+#define SNAV_CMD_LAND					"1002"
+#define SNAV_CMD_RETURN					"1003"
+#define SNAV_CMD_CIRCLE					"1004"
+#define SNAV_CMD_TRAIL_NAVIGATION		"1005"
+#define SNAV_CMD_GPS_FOLLOW				"1006"
+#define SNAV_CMD_MODIFY_SSID_PWD		"1025"
 
-#define SNAV_CMD_TAKE_OFF "1001"
-#define SNAV_CMD_LAND "1002"
-#define SNAV_CMD_RETURN "1003"
-#define SNAV_CMD_CIRCLE "1004"
-#define SNAV_CMD_LINE_PLAN "1005"
-#define SNAV_CMD_WITHOUT_HEAD "1006"
-#define SNAV_CMD_GPS_FOLLOW "1007"
-#define SNAV_CMD_SETTING_MODE "1008"
-#define SNAV_CMD_FACE_CHECK "1009"
-#define SNAV_CMD_HEIGHT_DISTANCE_LIMIT "1010"
-#define SNAV_CMD_LIGHT_FRONT_SWITCH "1011"
-#define SNAV_CMD_BRIGHTNESS "1012"
-#define SNAV_CMD_SELF_CHECK "1013"
-#define SNAV_CMD_FLOW_LOCATION_SWITCH "1014"
-#define SNAV_CMD_PIC_SIZE "1015"
-#define SNAV_CMD_VIDEO_SIZE "1016"
-#define SNAV_CMD_PIC_FORMAT "1017"
-#define SNAV_CMD_VIDEO_FORMAT "1018"
-#define SNAV_CMD_MODE_CHECK "1019"
-#define SNAV_CMD_ISO "1020"
-#define SNAV_CMD_PIC_FILTER_STYLE "1021"
-#define SNAV_CMD_VIDEO_FILTER_STYLE "1022"
-#define SNAV_CMD_PIC_SNAP_MODE "1023"
-#define SNAV_CMD_GET_FLY_PARAM "1024"
-
-#define SNAV_CMD_MODIFY_SSID_PWD "1025"
+#define SNAV_CMD_FACE_BODY_FOLLOW  		"1100"
 
 
-#define SNAV_CMD_RETURN_TAKE_OFF "2001"
-#define SNAV_CMD_RETURN_LAND "2002"
-#define SNAV_CMD_RETURN_RETURN "2003"
-#define SNAV_CMD_RETURN_CIRCLE "2004"
-#define SNAV_CMD_RETURN_LINE_PLAN "2005"
-#define SNAV_CMD_RETURN_WITHOUT_HEAD "2006"
-#define SNAV_CMD_RETURN_GPS_FOLLOW "2007"
-#define SNAV_CMD_RETURN_SETTING_MODE "2008"
-#define SNAV_CMD_RETURN_FACE_CHECK "2009"
-#define SNAV_CMD_RETURN_HEIGHT_DISTANCE_LIMIT "2010"
-#define SNAV_CMD_RETURN_LIGHT_FRONT_SWITCH "2011"
-#define SNAV_CMD_RETURN_BRIGHTNESS "2012"
-#define SNAV_CMD_RETURN_SELF_CHECK "2013"
-#define SNAV_CMD_RETURN_FLOW_LOCATION_SWITCH "2014"
-#define SNAV_CMD_RETURN_PIC_SIZE "2015"
-#define SNAV_CMD_RETURN_VIDEO_SIZE "2016"
-#define SNAV_CMD_RETURN_PIC_FORMAT "2017"
-#define SNAV_CMD_RETURN_VIDEO_FORMAT "2018"
-#define SNAV_CMD_RETURN_MODE_CHECK "2019"
-#define SNAV_CMD_RETURN_ISO "2020"
-#define SNAV_CMD_RETURN_PIC_FILTER_STYLE "2021"
-#define SNAV_CMD_RETURN_VIDEO_FILTER_STYLE "2022"
-#define SNAV_CMD_RETURN_PIC_SNAP_MODE "2023"
-#define SNAV_CMD_RETURN_GET_FLY_PARAM "2024"
+#define SNAV_CMD_RETURN_TAKE_OFF		"2001"
+#define SNAV_CMD_RETURN_LAND			"2002"
+#define SNAV_CMD_RETURN_RETURN			"2003"
+#define SNAV_CMD_RETURN_CIRCLE			"2004"
+#define SNAV_CMD_RETURN_LINE_PLAN		"2005"
+#define SNAV_CMD_RETURN_GPS_FOLLOW 		"2006"
 
-#define SNAV_TASK_GET_INFO	"8001"
+#define SNAV_TASK_GET_INFO				"8001"
+#define SNAV_TASK_GET_VERSION			"8002"
 
-#define SNAV_TASK_GET_INFO_RESULT	"9001"
-#define SNAV_TASK_FACE_BODY_FOLLOW  "9002"
-
+#define SNAV_TASK_GET_INFO_RESULT		"9001"
+#define SNAV_TASK_GET_VERSION_RESULT	"9002"
 
 typedef unsigned char byte;
 
@@ -162,6 +128,13 @@ struct GpsPosition
   float yaw;
 };
 
+struct NavigationPosition
+{
+  float latitude;
+  float longitude;
+};
+
+
 //cuiyc face detect
 struct body_info
 {
@@ -179,7 +152,7 @@ const float safe_distance = 2.0f;
 const float min_angle_offset = 0.05f;
 //cuiyc  face detect
 
-int tcp_con_num = 0;
+//ensure only one tcp connection exist
 bool tcp_receive_thread_flag = false;
 bool tcp_send_thread_flag = false;
 
@@ -187,8 +160,6 @@ typedef struct
 {
 	int client_sockfd;
 }client_arg;
-
-#define CRICLE_OVER -1
 
 struct prodcons {
     char data[MAX_BUFF_LEN];
@@ -207,7 +178,7 @@ struct prodcons pro_udp_receive;
 
 
 struct timeval timeout_tcp = {SOCKET_OVER_TIME,0};	//5s
-struct timeval timeout_udp = {0,300000};	//300ms
+struct timeval timeout_udp = {0,300000};			//300ms
 
 
 std::vector<std::string> split(const  std::string& s, const std::string& delim)
@@ -237,7 +208,7 @@ float rad(double d)
 	return d * PI / 180.0;
 }
 
-float  CalcDistance(float fLati1, float fLong1, float fLati2, float fLong2)
+float CalcDistance(float fLati1, float fLong1, float fLati2, float fLong2)
 {
 	const float EARTH_RADIUS = 6378137;
 
@@ -250,7 +221,7 @@ float  CalcDistance(float fLati1, float fLong1, float fLati2, float fLong2)
 	return s;
 }
 
-float  CalcAxisDistance(float f1,  float f2)
+float CalcAxisDistance(float f1,  float f2)
 {
   const float EARTH_RADIUS = 6378137.0; //r =6378.137km earth radius
   const float PI = 3.1415926;
@@ -316,12 +287,10 @@ void* circle_receive(void* arg)
 		{
 			data_length = bytesToInt(buff_header, 0);
 
-			/*
 			if ((data_length < 0) || (data_length > 500))
 			{
 				continue;
 			}
-			*/
 
 			DEBUG("\n[%d]:circle_receive: header_length=%d, data_length=%d\n", count,header_length, data_length);
 			//fflush(stdout);
@@ -354,29 +323,13 @@ void* circle_receive(void* arg)
 						memset(pro_tcp_receive.data,0,MAX_BUFF_LEN);
 						memcpy(pro_tcp_receive.data, buff_data, MAX_BUFF_LEN);
 
-						if (strcmp(pro_tcp_receive.data, SNAV_HEART_BEAT) != 0)
-						{
-							DEBUG("******************data*******************\n");
-						}
-
-						/*
-						{
-							struct timeval time_val;
-							gettimeofday(&time_val, NULL);
-							double time_now = time_val.tv_sec + time_val.tv_usec * 1e-6;
-
-							DEBUG("[%d]:circle_receive prodcons fd_socket=%d, pro_tcp_receive=%s, time_now=%lf\n\n",
-									count,pro_tcp_receive.fd_socket, pro_tcp_receive.data, time_now);
-						}
-						*/
-
-
 					    //pthread_cond_signal(&pro_tcp_receive.flag_handler);
 					    pthread_mutex_unlock(&pro_tcp_receive.lock);
 
 						//avoid heartbeat and 8001 override the pro_tcp_receive.data(takeoff or landing)
 						if ((strcmp(pro_tcp_receive.data, SNAV_HEART_BEAT) != 0)
-							&& (strcmp(pro_tcp_receive.data, SNAV_TASK_GET_INFO) != 0))
+							&& (strcmp(pro_tcp_receive.data, SNAV_TASK_GET_INFO) != 0)
+							&& (strcmp(pro_tcp_receive.data, SNAV_TASK_GET_VERSION) != 0))
 						{
 							usleep(200000);	//200ms
 						}
@@ -399,7 +352,6 @@ void* circle_receive(void* arg)
 							pthread_mutex_unlock(&pro_tcp_receive.lock);
 
 							close(sockfd);
-							//tcp_con_num --;
 							tcp_receive_thread_flag = false;
     						pthread_exit(NULL);
 						}
@@ -418,7 +370,6 @@ void* circle_receive(void* arg)
 						pthread_mutex_unlock(&pro_tcp_receive.lock);
 
 						close(sockfd);
-						//tcp_con_num --;
 						tcp_receive_thread_flag = false;
 						pthread_exit(NULL);
 					}
@@ -443,7 +394,6 @@ void* circle_receive(void* arg)
 				pthread_mutex_unlock(&pro_tcp_receive.lock);
 
 				close(sockfd);
-				//tcp_con_num --;
 				tcp_receive_thread_flag = false;
 				pthread_exit(NULL);
 			}
@@ -462,7 +412,6 @@ void* circle_receive(void* arg)
 			pthread_mutex_unlock(&pro_tcp_receive.lock);
 
 			close(sockfd);
-			//tcp_con_num --;
 			tcp_receive_thread_flag = false;
 			pthread_exit(NULL);
 		}
@@ -477,7 +426,6 @@ void* circle_receive(void* arg)
 	pthread_mutex_unlock(&pro_tcp_receive.lock);
 
 	close(sockfd);
-	//tcp_con_num --;
 	tcp_receive_thread_flag = false;
     pthread_exit(NULL);
 }
@@ -526,16 +474,6 @@ void* circle_send(void* arg)
 			pthread_exit(NULL);
 		}
 
-		/*
-		{
-			struct timeval time_val;
-			gettimeofday(&time_val, NULL);
-			double time_now = time_val.tv_sec + time_val.tv_usec * 1e-6;
-			DEBUG("[%d]:circle_send check pro_tcp_send.bflag time_now=%lf\n", count, time_now);
-		}
-		*/
-
-
 		pthread_mutex_lock(&pro_tcp_send.lock);
 		bLocalTcpFlag = pro_tcp_send.bflag;
 
@@ -556,6 +494,7 @@ void* circle_send(void* arg)
 		usleep(20000);	//avoid of cpu over usage
 
 		/*
+		//no block handle
 		if (bLocalTcpFlag)
 		{
 			int a = strlen(result_to_client);
@@ -698,13 +637,16 @@ void* snav_handler(void* arg)
 	// Desired takeoff altitude
 	float kDesTakeoffAlt = 1.2;	//1.5;  // m
 
+	float fTrarilHeight = 1.8;	// m
+
 	// Fixed takeoff and landing speed
 	const float kLandingSpeed = -0.75;  // m/s
 	const float kTakeoffSpeed = 0.75;   // m/s
 	float distance_to_home;
-	bool circle_misson=false;
+	bool circle_mission=false;
 	static bool calcCirclePoint = false;
 
+	bool trail_navigation_mission = false;
 	bool gps_waypiont_mission = false;
 	bool gps_point_collect_mission = false;
 	bool followme_mission=false;
@@ -723,6 +665,12 @@ void* snav_handler(void* arg)
 	float distance_home_squared_threshold = 1;
 	FlatVars output_vel;
 
+	// Position at startup
+	static float x_est_startup = 0;
+	static float y_est_startup = 0;
+	static float z_est_startup = 0;
+	static float yaw_est_startup = 0;
+
 	// Mission State Machine
 	static size_t current_position = 0;
 
@@ -740,6 +688,8 @@ void* snav_handler(void* arg)
 
 	//gps postion fly
 	std::vector<GpsPosition> gps_positions;
+
+	std::vector<NavigationPosition> trail_navigation_positions;
 
 	//circle fly
 	std::vector<Position> circle_positions;
@@ -793,15 +743,6 @@ void* snav_handler(void* arg)
 		char last_udp_buff_data[MAX_BUFF_LEN];
 
 		sin_size=sizeof(struct sockaddr_in);
-
-		/*
-		{
-			struct timeval time_val;
-			gettimeofday(&time_val, NULL);
-			double time_now = time_val.tv_sec + time_val.tv_usec * 1e-6;
-			DEBUG("[%d]:snav_handler thread before udp recvfrom time_now=%lf\n", loop_counter, time_now);
-		}
-		*/
 
 		//receive the udp data
 		length=recvfrom(server_udp_sockfd,udp_buff_data,MAX_BUFF_LEN-1,0, (struct sockaddr *)&remote_addr,(socklen_t*)&sin_size);
@@ -1085,8 +1026,9 @@ void* snav_handler(void* arg)
 							if (state == MissionState::TRAJECTORY_FOLLOW)
 							{
 								current_position =0;
-								circle_misson=false;
+								circle_mission=false;
 								calcCirclePoint = false;
+								trail_navigation_mission = false;
 
 								//people detect cuiyc begin
 								face_mission=false;
@@ -1185,9 +1127,16 @@ void* snav_handler(void* arg)
 								}
 								DEBUG("gps_info=%s\n",gps_info);
 
-								sprintf(xyz_info, "xyz_info:%f:%f:%f",snav_data->high_level_control_data.position_estimated[0]
-																	 ,snav_data->high_level_control_data.position_estimated[1]
+								if (state == MissionState::ON_GROUND)
+								{
+									sprintf(xyz_info, "xyz_info:%f:%f:%f",0,0,0);
+								}
+								else
+								{
+									sprintf(xyz_info, "xyz_info:%f:%f:%f",(snav_data->high_level_control_data.position_estimated[0]-x_est_startup)
+																	 ,(snav_data->high_level_control_data.position_estimated[1]-y_est_startup)
 																	 ,snav_data->high_level_control_data.position_estimated[2]);
+								}
 								DEBUG("xyz_info=%s\n",xyz_info);
 
 								sprintf(rpy_info, "rpy_info:%f:%f:%f",snav_data->attitude_estimate.roll
@@ -1221,6 +1170,14 @@ void* snav_handler(void* arg)
 
 								DEBUG("rpy_info=%s\n",result_to_client);
 
+								memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
+							}
+							else if ((gpsparams_tcp.size() >= 1) && (gpsparams_tcp[0].compare(SNAV_TASK_GET_VERSION) == 0))
+							{
+								sprintf(result_to_client,"%s",SNAV_TASK_GET_VERSION_RESULT);
+
+								strcat(result_to_client, STR_SEPARATOR);
+								strcat(result_to_client, VERSION_NUM);
 								memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
 							}
 							else
@@ -1282,12 +1239,6 @@ void* snav_handler(void* arg)
 			float z_vel_des = 0;
 			float yaw_vel_des = 0;
 
-			// Position at startup
-			static float x_est_startup = 0;
-			static float y_est_startup = 0;
-			static float z_est_startup = 0;
-			static float yaw_est_startup = 0;
-
 			distance_home_squared = (x_est_startup-x_est)*(x_est_startup-x_est)+(y_est_startup-y_est)*(y_est_startup-y_est);
       		yaw_target_home = atan2(y_est_startup-y_est,x_est_startup-x_est);
 
@@ -1330,9 +1281,8 @@ void* snav_handler(void* arg)
 				system("hostapd -B /etc/hostapd.conf");
 			}
 
-			/*
 			if ((gpsparams_tcp.size() >= 2)
-				&& (gpsparams_tcp[0].compare(SNAV_TASK_FACE_BODY_FOLLOW) == 0))
+				&& (gpsparams_tcp[0].compare(SNAV_CMD_FACE_BODY_FOLLOW) == 0))
 			{
 				char switcher[MAX_BUFF_LEN];
 
@@ -1348,7 +1298,6 @@ void* snav_handler(void* arg)
 					face_body_follow_switch = false;
 				}
 			}
-			*/
 
 			if (state == MissionState::ON_GROUND)
 			{
@@ -1364,6 +1313,43 @@ void* snav_handler(void* arg)
 					{
 						mission_has_begun = true;
 						state = MissionState::STARTING_PROPS;
+					}
+					else if(gpsparams_tcp[0].compare(SNAV_CMD_TRAIL_NAVIGATION) == 0)
+					{
+						int position_num = 0;
+						int i=0;
+						int lati, longi;
+
+						position_num = atoi(gpsparams_tcp[1].c_str());
+
+						DEBUG("Trail Navigation position_num:%d\n", position_num);
+
+						if ((position_num >= MIN_GPS_POSITION_NUM) && (position_num >= MAX_GPS_POSITION_NUM))
+						{
+							continue;
+						}
+
+						for (i=0; i<2*position_num; i+=2)
+						{
+							lati = atoi(gpsparams_tcp[2+i].c_str());
+							longi = atoi(gpsparams_tcp[2+i+1].c_str());
+
+							DEBUG("Trail Navigation [%d]-lati,logi:%d\n", i/2, lati, longi);
+
+							NavigationPosition pos;
+							pos.latitude = pos.latitude;
+							pos.longitude = posGpsCurrent.longitude;
+
+							if(pos.latitude !=0 && pos.longitude !=0)
+							{
+								trail_navigation_positions.push_back(pos);
+							}
+						}
+
+						mission_has_begun = true;
+						state = MissionState::STARTING_PROPS;
+
+						trail_navigation_mission = true;
 					}
 					/*
 					else if(gpsparams_tcp[0].compare("gps_waypiont") == 0)
@@ -1473,14 +1459,29 @@ void* snav_handler(void* arg)
 					z_vel_des = kTakeoffSpeed;
 					yaw_vel_des = 0;
 
-					if (z_des - z_est_startup > kDesTakeoffAlt)
+					if (trail_navigation_mission)
 					{
-						task_take_off_in_progress = false;
-						state = MissionState::LOITER;
+						if (z_des - z_est_startup > fTrarilHeight)
+						{
+							task_take_off_in_progress = false;
+							state = MissionState::LOITER;
+						}
+						else if(z_des - z_est_startup > 0.8f*fTrarilHeight)
+						{
+							z_vel_des = kTakeoffSpeed*0.5f;
+						}
 					}
-					else if(z_des - z_est_startup > 0.8f*kDesTakeoffAlt)
+					else
 					{
-						z_vel_des = kTakeoffSpeed*0.5f;
+						if (z_des - z_est_startup > kDesTakeoffAlt)
+						{
+							task_take_off_in_progress = false;
+							state = MissionState::LOITER;
+						}
+						else if(z_des - z_est_startup > 0.8f*kDesTakeoffAlt)
+						{
+							z_vel_des = kTakeoffSpeed*0.5f;
+						}
 					}
 				}
 			}
@@ -1524,19 +1525,17 @@ void* snav_handler(void* arg)
 					if (props_state == SN_PROPS_STATE_NOT_SPINNING)
 					{
 						state = MissionState::ON_GROUND;
-						//system("ps -e |grep qcamvid |awk '{print $1}'| xargs kill -9");
 					}
 				}
 				else
 				{
 					state = MissionState::ON_GROUND;
-					//system("ps -e |grep qcamvid |awk '{print $1}'| xargs kill -9");
-
-					circle_misson=false;
+					circle_mission=false;
 					calcCirclePoint = false;
 					gps_waypiont_mission = false;
 					gps_point_collect_mission = false;
 					followme_mission = false;
+					trail_navigation_mission = false;
 
 					//people detect cuiyc begin
 					face_mission=false;
@@ -1621,7 +1620,7 @@ void* snav_handler(void* arg)
 						}
 					}
 				}
-				else */if(circle_misson)
+				else */if(circle_mission)
 				{
 					command_diff_x = circle_positions[current_position].x - (x_des-x_est_startup);
 					command_diff_y = circle_positions[current_position].y - (y_des-y_est_startup);
@@ -1629,7 +1628,7 @@ void* snav_handler(void* arg)
 					command_diff_yaw = circle_positions[current_position].yaw - yaw_des;
 
 
-					DEBUG("[%d] [circle_misson x_des y_des z_des]: [%f %f %f]\n",
+					DEBUG("[%d] [circle_mission x_des y_des z_des]: [%f %f %f]\n",
 							loop_counter,x_des,y_des,z_des);
 
 					if (command_diff_yaw > M_PI)
@@ -1645,7 +1644,7 @@ void* snav_handler(void* arg)
 					{
 						state = MissionState::LOITER;
 						current_position =0;
-						circle_misson=false;
+						circle_mission=false;
 						calcCirclePoint = false;
 						continue;
 					}
@@ -1669,7 +1668,7 @@ void* snav_handler(void* arg)
 							// No more circle_positions, so land
 							state = MissionState::LOITER;
 							current_position =0;
-							circle_misson=false;
+							circle_mission=false;
 							calcCirclePoint = false;
 						}
 					}
@@ -1679,7 +1678,7 @@ void* snav_handler(void* arg)
 					vel_z_target = command_diff_z/distance_to_dest * vel_target;
 					vel_yaw_target = command_diff_yaw/angle_per*vel_target;
 
-					DEBUG("[%d] [circle_misson vel_x_target vel_y_target vel_z_target vel_yaw_target]: [%f %f %f %f]\n",
+					DEBUG("[%d] [circle_mission vel_x_target vel_y_target vel_z_target vel_yaw_target]: [%f %f %f %f]\n",
 							loop_counter,vel_x_target,vel_y_target,vel_z_target,vel_yaw_target);
 
 					DEBUG("[%d] [distance_to_dest command_diff_x command_diff_y command_diff_z command_diff_yaw]: [%f %f %f %f %f]\n",
@@ -1688,6 +1687,50 @@ void* snav_handler(void* arg)
 					//if (current_position >= 0.9*circle_positions.size()) //slow down
 					//	vel_yaw_target =0;
 					//if(vel_yaw_target>0.8f)vel_yaw_target=0.8f;
+				}
+				else if (trail_navigation_mission)
+				{
+					command_diff_x = CalcAxisDistance(trail_navigation_positions[current_position].longitude,
+													  (float)posGpsCurrent.longitude/1e7);
+
+					command_diff_y = CalcAxisDistance(trail_navigation_positions[current_position].latitude,
+													  (float)posGpsCurrent.latitude/1e7);
+
+					distance_to_dest = CalcDistance(
+													trail_navigation_positions[current_position].latitude,
+													trail_navigation_positions[current_position].longitude,
+													(float)posGpsCurrent.latitude/1e7,
+													(float)posGpsCurrent.longitude/1e7);
+
+					if(distance_to_dest<0.01)
+					{
+						distance_to_dest = 0.01;
+					}  //to prevent dividing by zero
+
+					vel_x_target = command_diff_x/distance_to_dest * vel_target;
+					vel_y_target = command_diff_y/distance_to_dest * vel_target;
+					vel_z_target = command_diff_z/distance_to_dest * vel_target;
+
+					if(distance_to_dest < 2.5 ) //about 150*150   x,y 1.5m
+					{
+						//if it is on the last waypoint then slow down before stopping
+						float stopping_vel = sqrt(2*stopping_accel*distance_to_dest);
+						if(stopping_vel<vel_target)
+						{
+							vel_target = stopping_vel;
+						}
+					}
+
+					if(distance_to_dest<1) // 1m
+					{
+						// Close enough, move on
+						current_position++;
+						if (current_position >= trail_navigation_positions.size())
+						{
+						    state = MissionState::LOITER;
+							trail_navigation_mission = false;
+						}
+					}
 				}
 				/*
 				else if(followme_mission)	// && gpsparams_tcp[0].compare(SNAV_CMD_GPS_FOLLOW) == 0)
@@ -1734,6 +1777,7 @@ void* snav_handler(void* arg)
 					DEBUG("[%d] [vel_x_target vel_y_target vel_z_target vel_yaw_target]: [%f %f %f %f]\n",
 									loop_counter,vel_x_target,vel_y_target,vel_z_target,vel_yaw_target);
 				}
+				*/
 				//cuiyc add face detect begin
 				else if(face_mission)
 				{
@@ -1872,7 +1916,7 @@ void* snav_handler(void* arg)
 					DEBUG(" [%d]  body_mission [vel_x_target vel_y_target distance_to_dest vel_yaw_target]: [%f %f %f %f]\n",
 						loop_counter,vel_x_target,vel_y_target,distance_to_dest,vel_yaw_target);
 				}//cuiyc add face detect end
-				*/
+
 
 
 				//return mission
@@ -2027,13 +2071,16 @@ void* snav_handler(void* arg)
 						state = MissionState::LANDING;
 					}
 					//circel task
-					else if(gpsparams_tcp.size() >= 3 && gpsparams_tcp[0].compare(SNAV_CMD_CIRCLE) == 0)
+					else if(gpsparams_tcp.size() >= 3
+							&& gpsparams_tcp[0].compare(SNAV_CMD_CIRCLE) == 0
+							&& !return_mission
+							&& !trail_navigation_mission)
 					{
 						radius = atof(gpsparams_tcp[1].c_str());
 						clockwise = atoi(gpsparams_tcp[2].c_str());
 
-						curSendMode =SN_RC_OPTIC_FLOW_POS_HOLD_CMD;
-						circle_misson = true;
+						curSendMode = SN_RC_OPTIC_FLOW_POS_HOLD_CMD;
+						circle_mission = true;
 						calcCirclePoint = true;
 
 						if (radius < 1)
@@ -2053,7 +2100,10 @@ void* snav_handler(void* arg)
 								radius,clockwise,point_count,vel_target,angle_per);
 					}
 					//return task
-					else if(gpsparams_tcp.size() >= 1 && gpsparams_tcp[0].compare(SNAV_CMD_RETURN) == 0)
+					else if(gpsparams_tcp.size() >= 1
+							&& gpsparams_tcp[0].compare(SNAV_CMD_RETURN) == 0
+							&& !circle_mission
+							&& !trail_navigation_mission)
 					{
 						curSendMode =SN_RC_OPTIC_FLOW_POS_HOLD_CMD;
 						return_mission = true;
@@ -2077,6 +2127,49 @@ void* snav_handler(void* arg)
 				        gohome_y_vel_des = 0;
 				        gohome_z_vel_des = 0;
 				        gohome_yaw_vel_des = 0;
+
+						DEBUG("LOITER return enter TRAJECTORY_FOLLOW\n");
+					}
+					//trail_navigation task
+					else if(gpsparams_tcp.size() >= 1
+							&& gpsparams_tcp[0].compare(SNAV_CMD_TRAIL_NAVIGATION) == 0
+							&& !circle_mission
+							&& !return_mission)
+					{
+						int position_num = 0;
+						int i=0;
+						int lati, longi;
+
+						position_num = atoi(gpsparams_tcp[1].c_str());
+
+						DEBUG("Trail Navigation position_num:%d\n", position_num);
+
+						if ((position_num >= MIN_GPS_POSITION_NUM) && (position_num >= MAX_GPS_POSITION_NUM))
+						{
+							continue;
+						}
+
+						for (i=0; i<2*position_num; i+=2)
+						{
+							lati = atoi(gpsparams_tcp[2+i].c_str());
+							longi = atoi(gpsparams_tcp[2+i+1].c_str());
+
+							DEBUG("Trail Navigation [%d]-lati,logi:%d\n", i/2, lati, longi);
+
+							NavigationPosition pos;
+							pos.latitude = pos.latitude;
+							pos.longitude = posGpsCurrent.longitude;
+
+							if(pos.latitude !=0 && pos.longitude !=0)
+							{
+								trail_navigation_positions.push_back(pos);
+							}
+						}
+
+						trail_navigation_mission = true;
+
+						state = MissionState::TRAJECTORY_FOLLOW;
+						entering_loiter = true;
 
 						DEBUG("LOITER return enter TRAJECTORY_FOLLOW\n");
 					}
@@ -2130,7 +2223,6 @@ void* snav_handler(void* arg)
 						DEBUG("followme yaw_diff:%f \n",yaw_diff);
 					}
 					*/
-					/*
 					//cuiyc add face detect begin
 					else if(cur_body.have_face && face_body_follow_switch)
 					{
@@ -2165,9 +2257,8 @@ void* snav_handler(void* arg)
 						}
 					}
 					//cuiyc add face detect end
-					*/
 
-					if(circle_misson)
+					if(circle_mission)
 					{
 						if (t_now - t_loiter_start > kLoiterTime)
 						{
@@ -2238,6 +2329,14 @@ void* snav_handler(void* arg)
 							entering_loiter = true;
 						}
 					}
+					else if (trail_navigation_mission)
+					{
+						if (t_now - t_loiter_start > kLoiterTime)
+						{
+							state = MissionState::TRAJECTORY_FOLLOW;
+							entering_loiter = true;
+						}
+					}
 				}
 			}
 			else
@@ -2262,7 +2361,7 @@ void* snav_handler(void* arg)
 			{
 				state = MissionState::ON_GROUND;
 
-				circle_misson=false;
+				circle_mission=false;
 				calcCirclePoint = false;
 				gps_waypiont_mission = false;
 				gps_point_collect_mission = false;
@@ -2358,8 +2457,8 @@ void* snav_handler(void* arg)
 					DEBUG("[%d] [posGpsCurrent.latitude,posGpsCurrent.latitude]: [%d,%d]\n",
 							loop_counter,posGpsCurrent.latitude,posGpsCurrent.longitude);
 
-				if(circle_misson)
-					DEBUG("[%d] circle_misson position #%u: [%f,%f,%f,%f]\n",loop_counter,
+				if(circle_mission)
+					DEBUG("[%d] circle_mission position #%u: [%f,%f,%f,%f]\n",loop_counter,
 							current_position,circle_positions[current_position].x,
 							circle_positions[current_position].y, circle_positions[current_position].z,
 							circle_positions[current_position].yaw);
@@ -2449,9 +2548,16 @@ void* snav_handler(void* arg)
 					}
 					DEBUG("gps_info=%s\n",gps_info);
 
-					sprintf(xyz_info, "xyz_info:%f:%f:%f",snav_data->high_level_control_data.position_estimated[0]
-														 ,snav_data->high_level_control_data.position_estimated[1]
+					if (state == MissionState::ON_GROUND)
+					{
+						sprintf(xyz_info, "xyz_info:%f:%f:%f",0,0,0);
+					}
+					else
+					{
+						sprintf(xyz_info, "xyz_info:%f:%f:%f",(snav_data->high_level_control_data.position_estimated[0]-x_est_startup)
+														 ,(snav_data->high_level_control_data.position_estimated[1]-y_est_startup)
 														 ,snav_data->high_level_control_data.position_estimated[2]);
+					}
 					DEBUG("xyz_info=%s\n",xyz_info);
 
 					sprintf(rpy_info, "rpy_info:%f:%f:%f",snav_data->attitude_estimate.roll
@@ -2484,6 +2590,15 @@ void* snav_handler(void* arg)
 
 					DEBUG("rpy_info=%s\n",result_to_client);
 
+					memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
+				}
+				else if ((gpsparams_tcp.size() >= 1) && (gpsparams_tcp[0].compare(SNAV_TASK_GET_VERSION) == 0))
+				{
+					memset(result_to_client,0,MAX_BUFF_LEN);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_VERSION_RESULT);
+
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, VERSION_NUM);
 					memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
 				}
 				else
@@ -2716,7 +2831,7 @@ int main(int argc, char* argv[])
 	init_prodcon(&pro_tcp_send);
 
 	//only keep 10 log files
-	system("find /home/linaro/dev/examples/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +10|awk '{print $9}'| xargs rm -rf");
+	system("find /home/linaro/dev/examples/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +5|awk '{print $9}'| xargs rm -rf");
 
 	time_t now;
 	struct tm *curTime;
@@ -2778,7 +2893,6 @@ int main(int argc, char* argv[])
 		pthread_attr_destroy(&thread_attr);
 	}
 
-	/*
 	//create the face_body_follow process of snav
 	bool face_body_follow_flag = false;
 	while(!face_body_follow_flag)
@@ -2819,7 +2933,7 @@ int main(int argc, char* argv[])
 
 		pthread_attr_destroy(&thread_attr);
 	}
-	*/
+
 
     server_tcp_sockfd=socket(AF_INET,SOCK_STREAM,0);
 
@@ -2938,3 +3052,118 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
+
+/*******************open/close qcamvid************************************/
+
+/*
+//Add to open/close qcamvid
+int qcamvid_domain_socket_conn(const char *servername)
+{
+	int fd;
+
+	// create a UNIX domain stream socket
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+	{
+		return(-1);
+	}
+
+	int len, rval;
+
+	struct sockaddr_un client_un;
+    memset(&client_un, 0, sizeof(client_un));
+
+	client_un.sun_family = AF_UNIX;
+	sprintf(client_un.sun_path, "%05d", getpid());
+
+	len = offsetof(struct sockaddr_un, sun_path) + strlen(client_un.sun_path);
+	unlink(client_un.sun_path); //in case it already exists
+
+	if (bind(fd, (struct sockaddr *)&client_un, len) < 0)
+	{
+		rval=  -2;
+	}
+	else
+	{
+		//fill socket address structure with server's address
+		memset(&client_un, 0, sizeof(client_un));
+		client_un.sun_family = AF_UNIX;
+
+		strcpy(client_un.sun_path, servername);
+		len = offsetof(struct sockaddr_un, sun_path) + strlen(servername);
+		if (connect(fd, (struct sockaddr *)&client_un, len) < 0)
+		{
+			rval= -4;
+		}
+		else
+		{
+			return (fd);
+		}
+	}
+
+	int err;
+	err = errno;
+	close(fd);
+	errno = err;
+	return rval;
+}
+
+void qcamvid_domain_socket_close(int fd)
+{
+	close(fd);
+}
+
+
+void* sendFlagToQcamvid(bool bFlag)
+{
+	const char* UNIX_DOMAIN ="/tmp/qcam.domain";
+
+	int connfd;
+	connfd = qcamvid_domain_socket_conn(UNIX_DOMAIN);
+	if(connfd<0)
+	{
+		DEBUG("Error[%d] when connecting...",errno);
+		return 0;
+	}
+
+	DEBUG("Begin to recv/send...\n");
+	int i,n,size;
+	char buf[32];
+
+	//=========·¢ËÍ======================
+	memset(buf,0,32);
+	strcpy(buf, bFlag?"on":"off");
+	size = send(connfd, buf, 32, 0);
+
+	if (size >= 0)
+	{
+		DEBUG("Data[%d] Sended:%s\n",size,buf);
+	}
+	else if (size == -1)
+	{
+		DEBUG("Error[%d] when Sending Data:%s.\n",errno,strerror(errno));
+	}
+
+#if 0
+	//=========½ÓÊÕ=====================
+	size = recv(connfd, rvbuf, 32, 0);   //MSG_DONTWAIT
+	if(size>=0)
+	{
+		printf("Recieved Data[%d]:%c...%c\n",size,rvbuf[0],rvbuf[size-1]);
+	}
+	else if (size==-1)
+	{
+		printf("Error[%d] when recieving Data.\n",errno);
+	}
+#endif
+
+	sleep(1);
+
+	qcamvid_domain_socket_close(connfd);
+	DEBUG("qcamvid_domain_socket client exited.\n");
+}
+*/
+
+
+
+
+
