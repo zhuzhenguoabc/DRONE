@@ -58,25 +58,27 @@ using namespace std;
 #define HEART_BEAT_OVER_COUNT 3	//6
 #define SNAV_HEART_BEAT "heartbeat"
 
-#define SNAV_CMD_CONROL					"1000"
+#define SNAV_CMD_CONROL						"1000"
 
-#define SNAV_CMD_TAKE_OFF				"1001"
-#define SNAV_CMD_LAND					"1002"
-#define SNAV_CMD_RETURN					"1003"
-#define SNAV_CMD_CIRCLE					"1004"
-#define SNAV_CMD_TRAIL_NAVIGATION		"1005"
-#define SNAV_CMD_GPS_FOLLOW				"1006"
-#define SNAV_CMD_MODIFY_SSID_PWD		"1025"
+#define SNAV_CMD_TAKE_OFF					"1001"
+#define SNAV_CMD_LAND						"1002"
+#define SNAV_CMD_RETURN						"1003"
+#define SNAV_CMD_CIRCLE						"1004"
+#define SNAV_CMD_TRAIL_NAVIGATION			"1005"
+#define SNAV_CMD_GPS_FOLLOW					"1006"
+#define SNAV_CMD_MODIFY_SSID_PWD			"1025"
+#define SNAV_CMD_FACE_FOLLOW  				"1100"
+#define SNAV_CMD_BODY_FOLLOW  				"1101"
 
-#define SNAV_CMD_FACE_BODY_FOLLOW  		"1100"
-
-
-#define SNAV_CMD_RETURN_TAKE_OFF		"2001"
-#define SNAV_CMD_RETURN_LAND			"2002"
-#define SNAV_CMD_RETURN_RETURN			"2003"
-#define SNAV_CMD_RETURN_CIRCLE			"2004"
-#define SNAV_CMD_RETURN_LINE_PLAN		"2005"
-#define SNAV_CMD_RETURN_GPS_FOLLOW 		"2006"
+#define SNAV_CMD_RETURN_TAKE_OFF			"2001"
+#define SNAV_CMD_RETURN_LAND				"2002"
+#define SNAV_CMD_RETURN_RETURN				"2003"
+#define SNAV_CMD_RETURN_CIRCLE				"2004"
+#define SNAV_CMD_RETURN_TRAIL_NAVIGATION	"2005"
+#define SNAV_CMD_RETURN_GPS_FOLLOW 			"2006"
+#define SNAV_CMD_RETURN_MODIFY_SSID_PWD 	"2025"
+#define SNAV_CMD_RETURN_FACE_FOLLOW 		"2100"
+#define SNAV_CMD_RETURN_BODY_FOLLOW 		"2101"
 
 #define SNAV_TASK_GET_INFO				"8001"
 #define SNAV_TASK_GET_VERSION			"8002"
@@ -147,7 +149,8 @@ struct body_info
 };
 
 struct body_info cur_body;
-static bool face_body_follow_switch = false;
+static bool face_follow_switch = false;
+static bool body_follow_switch = false;
 const float safe_distance = 2.0f;
 const float min_angle_offset = 0.05f;
 //cuiyc  face detect
@@ -181,13 +184,18 @@ struct timeval timeout_tcp = {SOCKET_OVER_TIME,0};	//5s
 struct timeval timeout_udp = {0,300000};			//300ms
 
 
-std::vector<std::string> split(const  std::string& s, const std::string& delim)
+vector<string> split(const string& s, const string& delim)
 {
-    std::vector<std::string> elems;
+    vector<string> elems;
+
     size_t pos = 0;
     size_t len = s.length();
     size_t delim_len = delim.length();
-    if (delim_len == 0) return elems;
+
+    if (delim_len == 0)
+	{
+		return elems;
+    }
     while (pos < len)
     {
         int find_pos = s.find(delim, pos);
@@ -214,10 +222,10 @@ float CalcDistance(float fLati1, float fLong1, float fLati2, float fLong2)
 
 	double radLat1 = rad(fLati1);
 	double radLat2 = rad(fLati2);
-	double a = radLat1 - radLat2;
-	double b = rad(fLong1) - rad(fLong2);
-	double s = 2 * asin(sqrt(pow(sin(a/2),2) + cos(radLat1)*cos(radLat2)*pow(sin(b/2),2)));
-	s = s * EARTH_RADIUS;
+	double lati_diff = radLat1 - radLat2;
+	double long_diff = rad(fLong1) - rad(fLong2);
+	double s = 2*asin(sqrt(pow(sin(lati_diff/2),2) + cos(radLat1)*cos(radLat2)*pow(sin(long_diff/2),2)));
+	s = s*EARTH_RADIUS;
 	return s;
 }
 
@@ -687,12 +695,12 @@ void* snav_handler(void* arg)
 	SnRcCommandType curSendMode=SN_RC_OPTIC_FLOW_POS_HOLD_CMD;
 
 	//gps postion fly
-	std::vector<GpsPosition> gps_positions;
+	vector<GpsPosition> gps_positions;
 
-	std::vector<NavigationPosition> trail_navigation_positions;
+	vector<NavigationPosition> trail_navigation_positions;
 
 	//circle fly
-	std::vector<Position> circle_positions;
+	vector<Position> circle_positions;
 	float radius = 2.5f;//meter
 
 	float vel_target = 0.75;	 //m/sec
@@ -900,8 +908,8 @@ void* snav_handler(void* arg)
 			}
 			//check end
 
-			std::string recv_tcp_cmd, recv_udp_cmd;
-			std::vector<std::string> gpsparams_tcp, gpsparams_udp;
+			string recv_tcp_cmd, recv_udp_cmd;
+			vector<string> gpsparams_tcp, gpsparams_udp;
 
 			//get the data from tcp socket(task data) and udp socket(control data)
 			if (bLocalTcpFlag)
@@ -1281,21 +1289,41 @@ void* snav_handler(void* arg)
 				system("hostapd -B /etc/hostapd.conf");
 			}
 
-			if ((gpsparams_tcp.size() >= 2)
-				&& (gpsparams_tcp[0].compare(SNAV_CMD_FACE_BODY_FOLLOW) == 0))
+			if ((gpsparams_udp.size() >= 2)
+				&& (gpsparams_udp[0].compare(SNAV_CMD_FACE_FOLLOW) == 0))
 			{
 				char switcher[MAX_BUFF_LEN];
 
 				memset(switcher,0,MAX_BUFF_LEN);
-				memcpy(switcher, gpsparams_tcp[1].c_str(), MAX_BUFF_LEN);
+				memcpy(switcher, gpsparams_udp[1].c_str(), MAX_BUFF_LEN);
 
 				if (strcmp(switcher, "on") == 0)
 				{
-					face_body_follow_switch = true;
+					face_follow_switch = true;
+					body_follow_switch = false;
 				}
 				else
 				{
-					face_body_follow_switch = false;
+					face_follow_switch = false;
+				}
+			}
+
+			if ((gpsparams_udp.size() >= 2)
+				&& (gpsparams_udp[0].compare(SNAV_CMD_BODY_FOLLOW) == 0))
+			{
+				char switcher[MAX_BUFF_LEN];
+
+				memset(switcher,0,MAX_BUFF_LEN);
+				memcpy(switcher, gpsparams_udp[1].c_str(), MAX_BUFF_LEN);
+
+				if (strcmp(switcher, "on") == 0)
+				{
+					body_follow_switch = true;
+					face_follow_switch = false;
+				}
+				else
+				{
+					body_follow_switch = false;
 				}
 			}
 
@@ -1690,15 +1718,15 @@ void* snav_handler(void* arg)
 				}
 				else if (trail_navigation_mission)
 				{
-					command_diff_x = CalcAxisDistance(trail_navigation_positions[current_position].longitude,
+					command_diff_x = CalcAxisDistance(trail_navigation_positions[current_position].longitude/1e7,
 													  (float)posGpsCurrent.longitude/1e7);
 
-					command_diff_y = CalcAxisDistance(trail_navigation_positions[current_position].latitude,
+					command_diff_y = CalcAxisDistance(trail_navigation_positions[current_position].latitude/1e7,
 													  (float)posGpsCurrent.latitude/1e7);
 
 					distance_to_dest = CalcDistance(
-													trail_navigation_positions[current_position].latitude,
-													trail_navigation_positions[current_position].longitude,
+													trail_navigation_positions[current_position].latitude/1e7,
+													trail_navigation_positions[current_position].longitude/1e7,
 													(float)posGpsCurrent.latitude/1e7,
 													(float)posGpsCurrent.longitude/1e7);
 
@@ -2224,7 +2252,7 @@ void* snav_handler(void* arg)
 					}
 					*/
 					//cuiyc add face detect begin
-					else if(cur_body.have_face && face_body_follow_switch)
+					else if(cur_body.have_face && face_follow_switch)
 					{
 						float face_offset ;
 						face_offset = M_PI*cur_body.angle/180;
@@ -2240,7 +2268,7 @@ void* snav_handler(void* arg)
 							DEBUG("followme have_face LOITER -> FACE_FOLLOW\n" );
 						}
 					}
-					else if(cur_body.have_body && face_body_follow_switch)
+					else if(cur_body.have_body && body_follow_switch)
 					{
 						float body_offset ;
 						body_offset = M_PI*cur_body.angle/180;

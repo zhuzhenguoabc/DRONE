@@ -61,9 +61,8 @@ using namespace std;
 #define SNAV_CMD_TRAIL_NAVIGATION			"1005"
 #define SNAV_CMD_GPS_FOLLOW					"1006"
 #define SNAV_CMD_MODIFY_SSID_PWD			"1025"
-
-#define SNAV_CMD_FACE_BODY_FOLLOW  			"1100"
-
+#define SNAV_CMD_FACE_FOLLOW  				"1100"
+#define SNAV_CMD_BODY_FOLLOW  				"1101"
 
 #define SNAV_CMD_RETURN_TAKE_OFF			"2001"
 #define SNAV_CMD_RETURN_LAND				"2002"
@@ -72,7 +71,8 @@ using namespace std;
 #define SNAV_CMD_RETURN_TRAIL_NAVIGATION	"2005"
 #define SNAV_CMD_RETURN_GPS_FOLLOW 			"2006"
 #define SNAV_CMD_RETURN_MODIFY_SSID_PWD 	"2025"
-#define SNAV_CMD_RETURN_FACE_BODY_FOLLOW 	"2100"
+#define SNAV_CMD_RETURN_FACE_FOLLOW 		"2100"
+#define SNAV_CMD_RETURN_BODY_FOLLOW 		"2101"
 
 
 
@@ -145,7 +145,8 @@ struct body_info
 };
 
 struct body_info cur_body;
-static bool face_body_follow_switch = false;
+static bool face_follow_switch = false;
+static bool body_follow_switch = false;
 const float safe_distance = 2.0f;
 const float min_angle_offset = 0.05f;
 //cuiyc  face detect
@@ -175,13 +176,19 @@ struct prodcons pro_udp_receive;
 struct timeval timeout_udp = {0,300000};			//300ms
 
 
-std::vector<std::string> split(const  std::string& s, const std::string& delim)
+vector<string> split(const string& s, const string& delim)
 {
-    std::vector<std::string> elems;
+    vector<string> elems;
+
     size_t pos = 0;
     size_t len = s.length();
     size_t delim_len = delim.length();
-    if (delim_len == 0) return elems;
+
+    if (delim_len == 0)
+	{
+		return elems;
+    }
+
     while (pos < len)
     {
         int find_pos = s.find(delim, pos);
@@ -193,35 +200,37 @@ std::vector<std::string> split(const  std::string& s, const std::string& delim)
         elems.push_back(s.substr(pos, find_pos - pos));
         pos = find_pos + delim_len;
     }
+
     return elems;
 }
 
+//angle transfrom to radian
 float rad(double d)
 {
 	const float PI = 3.1415926;
-	return d * PI / 180.0;
+	return d*PI/180.0;
 }
 
 float CalcDistance(float fLati1, float fLong1, float fLati2, float fLong2)
 {
-	const float EARTH_RADIUS = 6378137;
+	const float EARTH_RADIUS = 6378137;	//m
 
 	double radLat1 = rad(fLati1);
 	double radLat2 = rad(fLati2);
-	double a = radLat1 - radLat2;
-	double b = rad(fLong1) - rad(fLong2);
-	double s = 2 * asin(sqrt(pow(sin(a/2),2) + cos(radLat1)*cos(radLat2)*pow(sin(b/2),2)));
-	s = s * EARTH_RADIUS;
+	double lati_diff = radLat1 - radLat2;
+	double long_diff = rad(fLong1) - rad(fLong2);
+	double s = 2*asin(sqrt(pow(sin(lati_diff/2),2) + cos(radLat1)*cos(radLat2)*pow(sin(long_diff/2),2)));
+	s = s*EARTH_RADIUS;
 	return s;
 }
 
 float CalcAxisDistance(float f1,  float f2)
 {
-  const float EARTH_RADIUS = 6378137.0; //r =6378.137km earth radius
-  const float PI = 3.1415926;
+	const float EARTH_RADIUS = 6378137.0; //r =6378.137km earth radius
+	const float PI = 3.1415926;
 
-  double s =(f1-f2) * PI * EARTH_RADIUS / 180.0; //  n*pi*r/180
-  return s;
+	double s =(f1-f2)*PI*EARTH_RADIUS/180.0; //  n*pi*r/180
+	return s;
 }
 
 void get_ip_address(unsigned long address,char* ip)
@@ -468,7 +477,6 @@ int main(int argc, char* argv[])
 	freopen(log_filename, "a", stdout); setbuf(stdout, NULL);
 	freopen(log_filename, "a", stderr); setbuf(stderr, NULL);
 
-
 	//create the face_body_follow process of snav
 	bool face_body_follow_flag = false;
 	while(!face_body_follow_flag)
@@ -510,7 +518,6 @@ int main(int argc, char* argv[])
 		pthread_attr_destroy(&thread_attr);
 	}
 
-
 	char udp_receive_data[MAX_BUFF_LEN];
 	char result_to_client[MAX_BUFF_LEN];
 
@@ -531,7 +538,7 @@ int main(int argc, char* argv[])
 
 	// Fixed takeoff and landing speed
 	const float kLandingSpeed = -0.75;  // m/s
-	const float kTakeoffSpeed = 0.75;   // m/s
+	const float kTakeoffSpeed = 0.9;	//0.75;   // m/s
 	float distance_to_home;
 	bool circle_mission=false;
 	static bool calcCirclePoint = false;
@@ -576,12 +583,11 @@ int main(int argc, char* argv[])
 	SnRcCommandType curSendMode=SN_RC_OPTIC_FLOW_POS_HOLD_CMD;
 
 	//gps postion fly
-	std::vector<GpsPosition> gps_positions;
-
-	std::vector<NavigationPosition> trail_navigation_positions;
+	vector<GpsPosition> gps_positions;
+	vector<NavigationPosition> trail_navigation_positions;
 
 	//circle fly
-	std::vector<Position> circle_positions;
+	vector<Position> circle_positions;
 	float radius = 2.5f;//meter
 
 	float vel_target = 0.75;	 //m/sec
@@ -750,7 +756,7 @@ int main(int argc, char* argv[])
 			CpuStats cpu_status = snav_data->cpu_stats;
 			for(int j = 0; j < 10; j++)
 			{
-				if (cpu_status.temp[j] >= 78)
+				if (cpu_status.temp[j] >= 80)
 				{
 					drone_state = DroneState::CPU_OVER_HEAT;
 				}
@@ -802,8 +808,8 @@ int main(int argc, char* argv[])
 			}
 			//check end
 
-			std::string recv_udp_cmd;
-			std::vector<std::string> gpsparams_udp;
+			string recv_udp_cmd;
+			vector<string> gpsparams_udp;
 
 			if (bLocalUdpFlag)
 			{
@@ -1021,7 +1027,7 @@ int main(int argc, char* argv[])
 
 					DEBUG("udp sendto SNAV_TASK_GET_INFO_RESULT length=%d\n",length);
 
-
+					continue;
 					//memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
 				}
 				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_GET_VERSION) == 0))
@@ -1035,6 +1041,8 @@ int main(int argc, char* argv[])
 
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 					DEBUG("udp sendto SNAV_TASK_GET_VERSION_RESULT length=%d\n",length);
+
+					continue;
 				}
 				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_CMD_TAKE_OFF) == 0))
 				{
@@ -1064,12 +1072,19 @@ int main(int argc, char* argv[])
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 					DEBUG("udp sendto SNAV_CMD_RETURN_MODIFY_SSID_PWD length=%d\n",length);
 				}
-				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_CMD_FACE_BODY_FOLLOW) == 0))
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_CMD_FACE_FOLLOW) == 0))
 				{
-					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_FACE_BODY_FOLLOW);
+					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_FACE_FOLLOW);
 
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
-					DEBUG("udp sendto SNAV_CMD_RETURN_FACE_BODY_FOLLOW length=%d\n",length);
+					DEBUG("udp sendto SNAV_CMD_RETURN_FACE_FOLLOW length=%d\n",length);
+				}
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_CMD_BODY_FOLLOW) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_BODY_FOLLOW);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_CMD_RETURN_BODY_FOLLOW length=%d\n",length);
 				}
 				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_CMD_TRAIL_NAVIGATION) == 0))
 				{
@@ -1149,7 +1164,7 @@ int main(int argc, char* argv[])
 
 
 			if ((gpsparams_udp.size() >= 2)
-				&& (gpsparams_udp[0].compare(SNAV_CMD_FACE_BODY_FOLLOW) == 0))
+				&& (gpsparams_udp[0].compare(SNAV_CMD_FACE_FOLLOW) == 0))
 			{
 				char switcher[MAX_BUFF_LEN];
 
@@ -1158,11 +1173,31 @@ int main(int argc, char* argv[])
 
 				if (strcmp(switcher, "on") == 0)
 				{
-					face_body_follow_switch = true;
+					face_follow_switch = true;
+					body_follow_switch = false;
 				}
 				else
 				{
-					face_body_follow_switch = false;
+					face_follow_switch = false;
+				}
+			}
+
+			if ((gpsparams_udp.size() >= 2)
+				&& (gpsparams_udp[0].compare(SNAV_CMD_BODY_FOLLOW) == 0))
+			{
+				char switcher[MAX_BUFF_LEN];
+
+				memset(switcher,0,MAX_BUFF_LEN);
+				memcpy(switcher, gpsparams_udp[1].c_str(), MAX_BUFF_LEN);
+
+				if (strcmp(switcher, "on") == 0)
+				{
+					body_follow_switch = true;
+					face_follow_switch = false;
+				}
+				else
+				{
+					body_follow_switch = false;
 				}
 			}
 
@@ -1456,15 +1491,14 @@ int main(int argc, char* argv[])
 				}
 				else if (trail_navigation_mission)
 				{
-					command_diff_x = CalcAxisDistance(trail_navigation_positions[current_position].longitude,
+					command_diff_x = CalcAxisDistance(trail_navigation_positions[current_position].longitude/1e7,
 													  (float)posGpsCurrent.longitude/1e7);
 
-					command_diff_y = CalcAxisDistance(trail_navigation_positions[current_position].latitude,
+					command_diff_y = CalcAxisDistance(trail_navigation_positions[current_position].latitude/1e7,
 													  (float)posGpsCurrent.latitude/1e7);
 
-					distance_to_dest = CalcDistance(
-													trail_navigation_positions[current_position].latitude,
-													trail_navigation_positions[current_position].longitude,
+					distance_to_dest = CalcDistance(trail_navigation_positions[current_position].latitude/1e7,
+													trail_navigation_positions[current_position].longitude/1e7,
 													(float)posGpsCurrent.latitude/1e7,
 													(float)posGpsCurrent.longitude/1e7);
 
@@ -1877,7 +1911,7 @@ int main(int argc, char* argv[])
 							DEBUG("Trail Navigation [%d]-lati,logi:%d\n", i/2, lati, longi);
 
 							NavigationPosition pos;
-							pos.latitude = pos.latitude;
+							pos.latitude = posGpsCurrent.latitude;
 							pos.longitude = posGpsCurrent.longitude;
 
 							if(pos.latitude !=0 && pos.longitude !=0)
@@ -1894,13 +1928,13 @@ int main(int argc, char* argv[])
 						DEBUG("LOITER return enter TRAJECTORY_FOLLOW\n");
 					}
 					//cuiyc add face detect begin
-					else if(cur_body.have_face && face_body_follow_switch)
+					else if(cur_body.have_face && body_follow_switch)
 					{
 						float face_offset ;
 						face_offset = M_PI*cur_body.angle/180;
 						DEBUG("followme have_face\n" );
 
-						if(abs(face_offset) >0.055f || cur_body.distance>(safe_distance+0.15)
+						if(abs(face_offset)>0.055f || cur_body.distance>(safe_distance+0.15)
 							|| cur_body.distance < (safe_distance-0.15))
 						{
 							face_mission = true;
@@ -1910,13 +1944,13 @@ int main(int argc, char* argv[])
 							DEBUG("followme have_face LOITER -> FACE_FOLLOW\n" );
 						}
 					}
-					else if(cur_body.have_body && face_body_follow_switch)
+					else if(cur_body.have_body && body_follow_switch)
 					{
 						float body_offset ;
 						body_offset = M_PI*cur_body.angle/180;
 						DEBUG("followme have_body\n" );
 
-						if(abs(body_offset) >0.055f || cur_body.distance>(safe_distance+0.15)
+						if(abs(body_offset)>0.055f || cur_body.distance>(safe_distance+0.15)
 							|| cur_body.distance < (safe_distance-0.15))
 						{
 							body_mission= true;
