@@ -60,6 +60,7 @@ using namespace std;
 #define SNAV_CMD_CIRCLE						"1004"
 #define SNAV_CMD_TRAIL_NAVIGATION			"1005"
 #define SNAV_CMD_GPS_FOLLOW					"1006"
+#define SNAV_CMD_PANORAMA					"1007"
 #define SNAV_CMD_MODIFY_SSID_PWD			"1025"
 #define SNAV_CMD_FACE_FOLLOW  				"1100"
 #define SNAV_CMD_BODY_FOLLOW  				"1101"
@@ -70,6 +71,7 @@ using namespace std;
 #define SNAV_CMD_RETURN_CIRCLE				"2004"
 #define SNAV_CMD_RETURN_TRAIL_NAVIGATION	"2005"
 #define SNAV_CMD_RETURN_GPS_FOLLOW 			"2006"
+#define SNAV_CMD_RETURN_PANORAMA			"2007"
 #define SNAV_CMD_RETURN_MODIFY_SSID_PWD 	"2025"
 #define SNAV_CMD_RETURN_FACE_FOLLOW 		"2100"
 #define SNAV_CMD_RETURN_BODY_FOLLOW 		"2101"
@@ -141,14 +143,17 @@ struct body_info
   int  body_flag; //1000 upperbody 1001 fullbody
   bool newP;
   float distance;   // m
+  float hegith_calib;   // m for height need to changed to center
   float angle;   // m
 };
 
 struct body_info cur_body;
 static bool face_follow_switch = false;
 static bool body_follow_switch = false;
-const float safe_distance = 2.0f;
-const float min_angle_offset = 0.05f;
+static bool face_rotate_switch = false; // false: drone will parallel;   true:drone will first rotate to face then close
+const float safe_distance = 1.6f;
+const float min_angle_offset = 0.08f;
+const float safe_distanceB = 2.5f; //body distance
 //cuiyc  face detect
 
 //ensure only one tcp connection exist
@@ -543,6 +548,9 @@ int main(int argc, char* argv[])
 	bool circle_mission=false;
 	static bool calcCirclePoint = false;
 
+	bool panorama_mission = false;
+	static bool calcPanoramaPoint = false;
+
 	bool trail_navigation_mission = false;
 	bool gps_waypiont_mission = false;
 	bool gps_point_collect_mission = false;
@@ -589,6 +597,9 @@ int main(int argc, char* argv[])
 	//circle fly
 	vector<Position> circle_positions;
 	float radius = 2.5f;//meter
+
+	//panorama
+	vector<Position> panorama_positions;
 
 	float vel_target = 0.75;	 //m/sec
 	int point_count = 72;
@@ -903,6 +914,7 @@ int main(int argc, char* argv[])
 								{
 									current_position =0;
 									circle_mission=false;
+									panorama_mission = false;
 									calcCirclePoint = false;
 									trail_navigation_mission = false;
 
@@ -1099,6 +1111,13 @@ int main(int argc, char* argv[])
 
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 					DEBUG("udp sendto SNAV_CMD_RETURN_CIRCLE length=%d\n",length);
+				}
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_CMD_PANORAMA) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_PANORAMA);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_CMD_RETURN_PANORAMA length=%d\n",length);
 				}
 			}
 
@@ -1377,6 +1396,7 @@ int main(int argc, char* argv[])
 				{
 					state = MissionState::ON_GROUND;
 					circle_mission=false;
+					panorama_mission = false;
 					calcCirclePoint = false;
 					gps_waypiont_mission = false;
 					gps_point_collect_mission = false;
@@ -1421,7 +1441,55 @@ int main(int argc, char* argv[])
 					continue;
 				}
 
-				if(circle_mission)
+				if (panorama_mission)
+				{
+					command_diff_yaw = panorama_positions[current_position].yaw - yaw_des;
+
+					DEBUG("[%d] [panorama_mission yaw_des command_diff_yaw]: [%f,%f]\n",
+								loop_counter, yaw_des, command_diff_yaw);
+
+					if (command_diff_yaw > M_PI)
+					{
+						command_diff_yaw = command_diff_yaw - 2*M_PI;
+					}
+					else if (command_diff_yaw < -M_PI)
+					{
+						command_diff_yaw = command_diff_yaw+ 2*M_PI;
+					}
+
+					if (abs(command_diff_yaw)>M_PI*0.25f)
+					{
+						state = MissionState::LOITER;
+						current_position =0;
+						panorama_mission=false;
+						calcPanoramaPoint = false;
+						continue;
+					}
+
+					if (abs(command_diff_yaw)<0.03)
+					{
+						// Close enough, move on
+						current_position++;
+						if (current_position >= panorama_positions.size())
+						{
+							// No more panorama_positions,
+							state = MissionState::LOITER;
+							current_position = 0;
+							panorama_mission=false;
+							calcPanoramaPoint = false;
+						}
+					}
+
+					vel_x_target = 0;
+					vel_y_target = 0;
+					vel_z_target = 0;
+
+					vel_yaw_target = 2*(command_diff_yaw/angle_per*vel_target);
+
+					DEBUG("[%d][panorama_mission current_position vel_yaw_target]: [%d %f]\n",
+										loop_counter,current_position,vel_yaw_target);
+				}
+				else if(circle_mission)
 				{
 					command_diff_x = circle_positions[current_position].x - (x_des-x_est_startup);
 					command_diff_y = circle_positions[current_position].y - (y_des-y_est_startup);
@@ -1532,54 +1600,79 @@ int main(int argc, char* argv[])
 						}
 					}
 				}
-				//cuiyc add face detect begin
-				else if(face_mission)
+				else if(face_mission) //cuiyc add face detect begin
 				{
 					//static float f_dest_yaw,f_dest_x,f_dest_y;
-					static float distance_remain_x,distance_remain_y;
+					static float distance_remain_x,distance_remain_y,distance_remain_z;
 					static float forword_dis , parallel_dis,angle_face_offset;
 
-					if(cur_body.newP)
+					if(cur_body.newP )
 					{
-						forword_dis = cur_body.distance-safe_distance;
 						angle_face_offset = cur_body.angle*M_PI/180;
 
-						parallel_dis = tan(angle_face_offset)*cur_body.distance;
+						if(abs(angle_face_offset) > min_angle_offset && face_rotate_switch)
+						{
+							distance_remain_x = 0;
+							distance_remain_y = 0;
+							distance_remain_z = 0;
+							vel_yaw_target = angle_face_offset*vel_target*1.5;
 
-						distance_to_dest = sqrt(forword_dis*forword_dis + parallel_dis*parallel_dis);
+							DEBUG("[%d] face_mission angle_face_offset: [%f] \n",
+									loop_counter,angle_face_offset);
+						}
+						else
+						{
+							forword_dis = cur_body.distance-safe_distance;
+							parallel_dis = tan(angle_face_offset)*cur_body.distance;
 
-						DEBUG("[%d] face_mission newP [forword_dis parallel_dis distance_to_dest ]: [%f %f %f]\n",
-								loop_counter,forword_dis,parallel_dis,distance_to_dest);
+							distance_to_dest = sqrt(forword_dis*forword_dis + parallel_dis*parallel_dis);
 
-						distance_remain_x = cos(yaw_est)*forword_dis-sin(yaw_est)*parallel_dis;
-						distance_remain_y = sin(yaw_est)*forword_dis+cos(yaw_est)*parallel_dis;
+							DEBUG("[%d] face_mission newP [forword_dis parallel_dis distance_to_dest ]: [%f %f %f]\n",
+									loop_counter,forword_dis,parallel_dis,distance_to_dest);
+
+							distance_remain_x = cos(yaw_est)*forword_dis-sin(yaw_est)*parallel_dis;
+							distance_remain_y = sin(yaw_est)*forword_dis+cos(yaw_est)*parallel_dis;
+							distance_remain_z = cur_body.hegith_calib;
+							vel_yaw_target = 0;
+						}
 						cur_body.newP = false;
 					}
 
 					if(((abs(angle_face_offset))< min_angle_offset && abs(distance_to_dest) <0.05f)
 						|| !cur_body.have_face)
 					{
-						state = MissionState::LOITER;
-						DEBUG(" face_mission follow face-> LOITER\n" );
-						face_mission = false;
-						continue;
+						if(abs(distance_remain_z) > 0.1f)
+						{
+							vel_z_target = distance_remain_z*vel_target*1.5;
+							if(vel_z_target >vel_target) vel_z_target =vel_target;
+						}
+						else
+						{
+							state = MissionState::LOITER;
+							vel_z_target = 0;
+							DEBUG(" face_mission follow face-> LOITER\n" );
+							face_mission = false;
+							continue;
+						}
 					}
-					vel_yaw_target = 0;
 
 					//for test rotate
 					distance_remain_x = distance_remain_x - vel_x_des_sent*0.02f; //20ms a tick
 					distance_remain_y = distance_remain_y - vel_y_des_sent*0.02f;
+					distance_remain_z = distance_remain_z - vel_z_des_sent*0.02f;
 
 					distance_to_dest = sqrt(distance_remain_x*distance_remain_x +
 											 distance_remain_y*distance_remain_y);
 
-					DEBUG("[%d] face_mission [distance_remain_x distance_remain_y]: [%f %f]\n",
-							loop_counter,distance_remain_x,distance_remain_y);
+					DEBUG("[%d] face_mission [distance_remain_x distance_remain_y,distance_remain_z]: [%f %f %f]\n",
+							loop_counter,distance_remain_x,distance_remain_y,distance_remain_z);
 
 					if(abs(distance_remain_x) <0.05f)
 						distance_remain_x =0;
 					if(abs(distance_remain_y) <0.05f)
 						distance_remain_y =0;
+					if(abs(distance_remain_z) < 0.1f)
+						distance_remain_z =0;
 
 					if(abs(distance_to_dest) >0.05f)
 					{
@@ -1594,8 +1687,19 @@ int main(int argc, char* argv[])
 						vel_y_target = 0;
 					}
 
-					DEBUG("[%d] face_mission [vel_x_target vel_y_target distance_to_dest vel_yaw_target]: [%f %f %f %f]\n",
-						loop_counter,vel_x_target,vel_y_target,distance_to_dest,vel_yaw_target);
+					if(abs(distance_remain_z) > 0.1f)
+					{
+						vel_z_target = distance_remain_z*vel_target;
+						if(vel_z_target >vel_target) vel_z_target =vel_target;
+					}
+					else
+						vel_z_target = 0;
+
+					if(vel_yaw_target >0.75f)
+						vel_yaw_target = 0.75f;
+
+					DEBUG("[%d] face_mission [vel_x vel_y vel_z distance vel_yaw]: [%f %f %f %f %f]\n",
+						loop_counter,vel_x_target,vel_y_target,vel_z_target,distance_to_dest,vel_yaw_target);
 				}
 				else if(body_mission)
 				{
@@ -1605,7 +1709,7 @@ int main(int argc, char* argv[])
 
 					if(cur_body.newP)
 					{
-						forword_dis = cur_body.distance-safe_distance;
+						forword_dis = cur_body.distance-safe_distanceB;
 						angle_face_offset = cur_body.angle*M_PI/180;
 
 						parallel_dis = tan(angle_face_offset)*cur_body.distance;
@@ -1660,17 +1764,16 @@ int main(int argc, char* argv[])
 						vel_y_target = 0;
 					}
 
-					//command_diff_z = kDesTakeoffAlt - (z_des-z_est_startup);
+					/*command_diff_z = kDesTakeoffAlt - (z_des-z_est_startup);
 
-					//if(abs(command_diff_z)>0.05)
-					//	vel_z_target = command_diff_z/kDesTakeoffAlt * vel_target;
-					//else
-					//	vel_z_target =0;
+					if(abs(command_diff_z)>0.05)
+						vel_z_target = command_diff_z/kDesTakeoffAlt * vel_target;
+					else
+						vel_z_target =0;*/
 
 					DEBUG(" [%d]  body_mission [vel_x_target vel_y_target distance_to_dest vel_yaw_target]: [%f %f %f %f]\n",
 						loop_counter,vel_x_target,vel_y_target,distance_to_dest,vel_yaw_target);
 				}//cuiyc add face detect end
-
 
 
 				//return mission
@@ -1824,9 +1927,32 @@ int main(int argc, char* argv[])
 					{
 						state = MissionState::LANDING;
 					}
+					//panorama task
+					else if(gpsparams_udp.size() >= 2
+							&& gpsparams_udp[0].compare(SNAV_CMD_PANORAMA) == 0
+							&& !circle_mission
+							&& !return_mission
+							&& !trail_navigation_mission)
+					{
+						clockwise = atoi(gpsparams_udp[1].c_str());
+
+						curSendMode = SN_RC_OPTIC_FLOW_POS_HOLD_CMD;
+
+						panorama_mission = true;
+						calcPanoramaPoint = true;
+
+						point_count = 6;	//12;
+						vel_target = 0.5;	 //m/sec
+
+						angle_per = (2*M_PI)/(3*point_count);	//(120degree/point_count)
+
+						DEBUG("Panorama_mission: clockwise,point_count,angle_per:%d,%d,%f\n",
+								clockwise,point_count,angle_per);
+					}
 					//circel task
 					else if(gpsparams_udp.size() >= 3
 							&& gpsparams_udp[0].compare(SNAV_CMD_CIRCLE) == 0
+							&& !panorama_mission
 							&& !return_mission
 							&& !trail_navigation_mission)
 					{
@@ -1856,6 +1982,7 @@ int main(int argc, char* argv[])
 					//return task
 					else if(gpsparams_udp.size() >= 1
 							&& gpsparams_udp[0].compare(SNAV_CMD_RETURN) == 0
+							&& !panorama_mission
 							&& !circle_mission
 							&& !trail_navigation_mission)
 					{
@@ -1887,6 +2014,7 @@ int main(int argc, char* argv[])
 					//trail_navigation task
 					else if(gpsparams_udp.size() >= 1
 							&& gpsparams_udp[0].compare(SNAV_CMD_TRAIL_NAVIGATION) == 0
+							&& !panorama_mission
 							&& !circle_mission
 							&& !return_mission)
 					{
@@ -1928,19 +2056,20 @@ int main(int argc, char* argv[])
 						DEBUG("LOITER return enter TRAJECTORY_FOLLOW\n");
 					}
 					//cuiyc add face detect begin
-					else if(cur_body.have_face && body_follow_switch)
+					else if(cur_body.have_face && face_follow_switch) //cuiyc add face detect begin
 					{
 						float face_offset ;
 						face_offset = M_PI*cur_body.angle/180;
 						DEBUG("followme have_face\n" );
 
-						if(abs(face_offset)>0.055f || cur_body.distance>(safe_distance+0.15)
-							|| cur_body.distance < (safe_distance-0.15))
+						if(abs(face_offset) >min_angle_offset || abs(cur_body.distance -safe_distance) >0.05
+							|| abs(cur_body.hegith_calib)>0.1)
 						{
 							face_mission = true;
 							state = MissionState::TRAJECTORY_FOLLOW;
 							entering_loiter = true;
-							DEBUG("face_offset:%f	distance:%f\n",face_offset,cur_body.distance);
+							DEBUG("face_offset:%f	distance:%f hegith_calib:%f\n",face_offset,
+								cur_body.distance,cur_body.hegith_calib);
 							DEBUG("followme have_face LOITER -> FACE_FOLLOW\n" );
 						}
 					}
@@ -1950,88 +2079,131 @@ int main(int argc, char* argv[])
 						body_offset = M_PI*cur_body.angle/180;
 						DEBUG("followme have_body\n" );
 
-						if(abs(body_offset)>0.055f || cur_body.distance>(safe_distance+0.15)
-							|| cur_body.distance < (safe_distance-0.15))
+						if(abs(body_offset)>min_angle_offset || abs(cur_body.distance-safe_distanceB)>0.25f)
 						{
 							body_mission= true;
 							state = MissionState::TRAJECTORY_FOLLOW;
 							entering_loiter = true;
 							DEBUG("face_offset:%f	distance:%f\n",body_offset,cur_body.distance);
-							DEBUG("followme have_body LOITER -> FACE_FOLLOW\n" );
+							DEBUG("followme have_body LOITER -> BODY_FOLLOW\n" );
 						}
-					}
-					//cuiyc add face detect end
+					}//cuiyc add face detect end
 
-					if(circle_mission)
+					if (circle_mission && (t_now - t_loiter_start > kLoiterTime))
 					{
-						if (t_now - t_loiter_start > kLoiterTime)
+						if(calcCirclePoint)
 						{
-							if(calcCirclePoint)
+							//circle center
+							float circle_center_x;
+							float circle_center_y;
+							float yaw_t =0;
+
+							circle_center_x = x_est-x_est_startup + radius*cos(yaw_est);
+							circle_center_y = y_est-y_est_startup + radius*sin(yaw_est);
+
+							if ((clockwise != 1) && (clockwise != -1))
 							{
-								//circle center
-								float circle_center_x;
-								float circle_center_y;
-								float yaw_t =0;
-
-								circle_center_x = x_est-x_est_startup + radius*cos(yaw_est);
-								circle_center_y = y_est-y_est_startup + radius*sin(yaw_est);
-
-								if ((clockwise != 1) && (clockwise != -1))
-								{
-									clockwise = 1;
-								}
-
-								circle_positions.clear();//clear and recaculate.
-								for(int k=0;k<=point_count;k++)	//the last position must be the same as the first position
-								{
-									Position pos;
-									//pos.x = (1-cos(angle_per*k))*radius + x_est;
-									//pos.y = -sin(angle_per*k)*radius + y_est;
-
-									//yaw_t = yaw_est+angle_per*k*clockwise;
-									yaw_t = yaw_est-angle_per*k*clockwise;
-
-									if(yaw_t > M_PI)
-									{
-										yaw_t = yaw_t -2*M_PI;
-									}
-									else if (yaw_t < -M_PI)
-									{
-										yaw_t = yaw_t + 2*M_PI;
-									}
-
-									if(yaw_t>0)
-									{
-										pos.x = cos(yaw_t-M_PI)*radius + circle_center_x;
-										pos.y = sin(yaw_t-M_PI)*radius + circle_center_y;
-									}
-									else
-									{
-										pos.x = cos(yaw_t+M_PI)*radius + circle_center_x;
-										pos.y = sin(yaw_t+M_PI)*radius + circle_center_y;
-									}
-									pos.z = z_des - z_est_startup;	//kDesTakeoffAlt;
-									pos.yaw = yaw_t;
-
-									circle_positions.push_back(pos);
-								}
-
-								calcCirclePoint = false;
-
-								DEBUG("@@@@circle_center_point [%f,%f]\n",
-										circle_center_x,circle_center_y);
-
-								for(int k=0;k<circle_positions.size();k++)
-								{
-									DEBUG("@@@@[%d] position #%u: [%f,%f,%f,%f]\n",k,
-										k,circle_positions[k].x,circle_positions[k].y,
-										circle_positions[k].z,circle_positions[k].yaw);
-								}
+								clockwise = 1;
 							}
 
-							state = MissionState::TRAJECTORY_FOLLOW;
-							entering_loiter = true;
+							circle_positions.clear();//clear and recaculate.
+							for(int k=0;k<=point_count;k++)	//the last position must be the same as the first position
+							{
+								Position pos;
+								//pos.x = (1-cos(angle_per*k))*radius + x_est;
+								//pos.y = -sin(angle_per*k)*radius + y_est;
+
+								//yaw_t = yaw_est+angle_per*k*clockwise;
+								yaw_t = yaw_est-angle_per*k*clockwise;
+
+								if(yaw_t > M_PI)
+								{
+									yaw_t = yaw_t -2*M_PI;
+								}
+								else if (yaw_t < -M_PI)
+								{
+									yaw_t = yaw_t + 2*M_PI;
+								}
+
+								if(yaw_t>0)
+								{
+									pos.x = cos(yaw_t-M_PI)*radius + circle_center_x;
+									pos.y = sin(yaw_t-M_PI)*radius + circle_center_y;
+								}
+								else
+								{
+									pos.x = cos(yaw_t+M_PI)*radius + circle_center_x;
+									pos.y = sin(yaw_t+M_PI)*radius + circle_center_y;
+								}
+								pos.z = z_des - z_est_startup;	//kDesTakeoffAlt;
+								pos.yaw = yaw_t;
+
+								circle_positions.push_back(pos);
+							}
+
+							calcCirclePoint = false;
+
+							DEBUG("@@@@circle_center_point [%f,%f]\n",
+									circle_center_x,circle_center_y);
+
+							for(int k=0;k<circle_positions.size();k++)
+							{
+								DEBUG("@@@@[%d] position #%u: [%f,%f,%f,%f]\n",k,
+									k,circle_positions[k].x,circle_positions[k].y,
+									circle_positions[k].z,circle_positions[k].yaw);
+							}
 						}
+
+						state = MissionState::TRAJECTORY_FOLLOW;
+						entering_loiter = true;
+
+					}
+					else if(panorama_mission && (t_now - t_loiter_start > kLoiterTime))
+					{
+						if(calcPanoramaPoint)
+						{
+							float yaw_t =0;
+
+							if ((clockwise != 1) && (clockwise != -1))
+							{
+								clockwise = 1;
+							}
+
+							panorama_positions.clear();//clear and recaculate.
+							for(int k=0;k<=point_count;k++)
+							{
+								Position pos;
+								pos.x = x_est-x_est_startup;
+								pos.y = y_est-y_est_startup;
+
+								yaw_t = yaw_est-angle_per*k*clockwise;
+
+								if(yaw_t > M_PI)
+								{
+									yaw_t = yaw_t -2*M_PI;
+								}
+								else if (yaw_t < -M_PI)
+								{
+									yaw_t = yaw_t + 2*M_PI;
+								}
+								pos.z = z_des - z_est_startup;	//kDesTakeoffAlt;
+								pos.yaw = yaw_t;
+
+								panorama_positions.push_back(pos);
+							}
+
+							calcPanoramaPoint = false;
+
+							for(int k=0;k<panorama_positions.size();k++)
+							{
+								DEBUG("@@@@[%d] panorama_positions #%u: [%f,%f,%f,%f]\n",k,
+									k,panorama_positions[k].x,panorama_positions[k].y,
+									panorama_positions[k].z,panorama_positions[k].yaw);
+							}
+						}
+
+						state = MissionState::TRAJECTORY_FOLLOW;
+						entering_loiter = true;
 					}
 					else if (trail_navigation_mission)
 					{
@@ -2066,6 +2238,7 @@ int main(int argc, char* argv[])
 				state = MissionState::ON_GROUND;
 
 				circle_mission=false;
+				panorama_mission = false;
 				calcCirclePoint = false;
 				gps_waypiont_mission = false;
 				gps_point_collect_mission = false;
