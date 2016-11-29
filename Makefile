@@ -15,7 +15,8 @@ INCLUDES = -I./inc
 LDFLAGS=-L./lib
 LIBS = -lsnav_arm -ladsprpc -L./lib 
 
-TARGET = snav_transfer_control  snav_udp_test
+##TARGET = snav_control_proxy_tcp  snav_control_proxy_udp
+TARGET = snav_control_proxy_udp
 
 all: $(TARGET)
 
