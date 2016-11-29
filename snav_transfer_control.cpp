@@ -1289,13 +1289,13 @@ void* snav_handler(void* arg)
 				system("hostapd -B /etc/hostapd.conf");
 			}
 
-			if ((gpsparams_udp.size() >= 2)
-				&& (gpsparams_udp[0].compare(SNAV_CMD_FACE_FOLLOW) == 0))
+			if ((gpsparams_tcp.size() >= 2)
+				&& (gpsparams_tcp[0].compare(SNAV_CMD_FACE_FOLLOW) == 0))
 			{
 				char switcher[MAX_BUFF_LEN];
 
 				memset(switcher,0,MAX_BUFF_LEN);
-				memcpy(switcher, gpsparams_udp[1].c_str(), MAX_BUFF_LEN);
+				memcpy(switcher, gpsparams_tcp[1].c_str(), MAX_BUFF_LEN);
 
 				if (strcmp(switcher, "on") == 0)
 				{
@@ -1307,14 +1307,13 @@ void* snav_handler(void* arg)
 					face_follow_switch = false;
 				}
 			}
-
-			if ((gpsparams_udp.size() >= 2)
-				&& (gpsparams_udp[0].compare(SNAV_CMD_BODY_FOLLOW) == 0))
+			else if ((gpsparams_tcp.size() >= 2)
+				&& (gpsparams_tcp[0].compare(SNAV_CMD_BODY_FOLLOW) == 0))
 			{
 				char switcher[MAX_BUFF_LEN];
 
 				memset(switcher,0,MAX_BUFF_LEN);
-				memcpy(switcher, gpsparams_udp[1].c_str(), MAX_BUFF_LEN);
+				memcpy(switcher, gpsparams_tcp[1].c_str(), MAX_BUFF_LEN);
 
 				if (strcmp(switcher, "on") == 0)
 				{
@@ -1323,7 +1322,7 @@ void* snav_handler(void* arg)
 				}
 				else
 				{
-					body_follow_switch = false;
+					body_follow_switch = true;
 				}
 			}
 

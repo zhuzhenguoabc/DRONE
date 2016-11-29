@@ -163,7 +163,9 @@ struct body_info
 };
 
 struct body_info cur_body;
-static bool face_body_follow_switch = false;
+static bool face_follow_switch = false;
+static bool body_follow_switch = false;
+
 const float safe_distance = 2.0f;
 const float min_angle_offset = 0.05f;
 //cuiyc  face detect
