@@ -38,12 +38,15 @@ using namespace std;
 #endif
 
 #define SERVER_UDP_PORT 					14559
+#define DOMAIN_PORT							16889
 
 #define MAX_BUFF_LEN 						512
 #define MIN_GPS_POSITION_NUM 				2
 #define MAX_GPS_POSITION_NUM 				10
 
-#define VERSION_NUM 						"1.0.2"
+#define DOMAIN_BUFF_SIZE					16
+
+#define VERSION_NUM 						"1.0.3"
 #define STR_SEPARATOR  						","
 
 
@@ -56,10 +59,12 @@ using namespace std;
 #define SNAV_CMD_TRAIL_NAVIGATION			"1005"
 #define SNAV_CMD_GPS_FOLLOW					"1006"
 #define SNAV_CMD_PANORAMA					"1007"
-#define SNAV_CMD_PANORAMA_SNAPSHOT			"1008"
 #define SNAV_CMD_MODIFY_SSID_PWD			"1025"
 #define SNAV_CMD_FACE_FOLLOW  				"1100"
+#define SNAV_CMD_FACE_FOLLOW_MODE  			"1110"
 #define SNAV_CMD_BODY_FOLLOW  				"1101"
+
+
 
 #define SNAV_CMD_RETURN_TAKE_OFF			"2001"
 #define SNAV_CMD_RETURN_LAND				"2002"
@@ -70,14 +75,31 @@ using namespace std;
 #define SNAV_CMD_RETURN_PANORAMA			"2007"
 #define SNAV_CMD_RETURN_MODIFY_SSID_PWD 	"2025"
 #define SNAV_CMD_RETURN_FACE_FOLLOW 		"2100"
+#define SNAV_CMD_RETURN_FACE_FOLLOW_MODE  	"2110"
 #define SNAV_CMD_RETURN_BODY_FOLLOW 		"2101"
 
 
 #define SNAV_TASK_GET_INFO					"8001"
 #define SNAV_TASK_GET_VERSION				"8002"
+#define SNAV_TASK_CONFIRM_LAND				"8003"
 
 #define SNAV_TASK_GET_INFO_RESULT			"9001"
 #define SNAV_TASK_GET_VERSION_RESULT		"9002"
+#define SNAV_TASK_CONFIRM_LAND_RETURN		"9003"
+
+
+//send to client
+#define SNAV_TASK_SHOW_LAND_CONFIRM			"8004"
+#define SNAV_TASK_NEED_PANORAMA_SNAPSHOT	"8005"
+
+#define SNAV_TASK_SHOW_LAND_CONFIRM_RETURN	"9004"
+#define SNAV_TASK_PANORAMA_SNAPSHOT_RETURN	"9005"
+
+
+#define SNAV_INFO_OPTIC_FLOW_MISS_SAMPLE	"9100"
+#define SNAV_INFO_OVER_SAFE_HEIGHT			"9101"
+
+
 
 typedef unsigned char byte;
 
@@ -105,6 +127,8 @@ enum class DroneState
   GPS_ERROR,
   SONAR_ERROR,
   OPTIC_FLOW_ERROR,
+  EMERGENCY_LANDING_MODE,
+  EMERGENCY_KILL_MODE,
   MODE_ERROR
 };
 
@@ -149,11 +173,20 @@ static bool face_rotate_switch = false; // false: drone will parallel;   true:dr
 const float safe_distance = 1.6f;
 const float min_angle_offset = 0.08f;
 const float safe_distanceB = 2.5f; //body distance
+static bool adjust_people_height = false;
 //cuiyc  face detect
 
-//ensure only one tcp connection exist
-bool tcp_receive_thread_flag = false;
-bool tcp_send_thread_flag = false;
+
+static bool send_panorama_flag = false;
+static char panorama_buff[DOMAIN_BUFF_SIZE];
+
+static bool send_face_follow_swither_flag = false;
+static char face_follow_swither_buff[DOMAIN_BUFF_SIZE];
+
+static bool send_body_follow_swither_flag = false;
+static char body_follow_swither_buff[DOMAIN_BUFF_SIZE];
+
+
 
 typedef struct
 {
@@ -261,7 +294,9 @@ void* getVideoFaceFollowParam(void*)
 
 	const float window_degree = 72.7768f;
 	const float camera_rad =window_degree*M_PI/180; //camera 83.5 degree
+	const float camera_vert_rad =(9.0f/16)*window_degree*M_PI/180; //camera 83.5 degree
 	const float face_winth =0.150; //camera 83.5 degree
+	const float angle_camera =25*M_PI/180;//angle of inclination for camera
 	int listen_fd;
 	int ret=0;
 	int i;
@@ -313,7 +348,7 @@ void* getVideoFaceFollowParam(void*)
 					if(recv_php_buf[0] == 1)
 					{
 						// normal  face 18cm && camera 83.5 degree
-						float distance,angle;
+						float distance,angle,height_cal,vert_offset_angle;
 						cur_body.have_face=true;
 
 						if(recv_php_buf[6] == 720) //720p
@@ -326,8 +361,20 @@ void* getVideoFaceFollowParam(void*)
 						}
 						else if(recv_php_buf[5] != 0)
 						{
-							distance = face_winth/tan((recv_php_buf[3]*camera_rad/recv_php_buf[5])/2);
+							distance = face_winth/tan((recv_php_buf[3]*camera_rad/recv_php_buf[5]));
 						}
+						//face y center ,height need add to calibration to 1/3 height for image
+						vert_offset_angle = angle_camera -
+							camera_vert_rad*(recv_php_buf[6]/3 -recv_php_buf[2])/recv_php_buf[6];
+
+						height_cal =distance*tan(angle_camera) - distance * tan(vert_offset_angle);
+
+						if(!adjust_people_height)height_cal = 0;
+
+						//printf("tan(angle_camera):%f ,tan offset vertical:%f \n",tan(angle_camera),
+						//	tan(vert_offset_angle));
+
+						printf("angle_camera %f,vert_offset_angle:%f \n",angle_camera,vert_offset_angle);
 
 						//dgree for window 72.7768
 						angle = window_degree*((recv_php_buf[5]/2 - recv_php_buf[1])*1.0)/recv_php_buf[5];
@@ -338,6 +385,7 @@ void* getVideoFaceFollowParam(void*)
 							cur_body.distance = distance;
 							cur_body.angle 	= angle;
 							cur_body.newP = true;
+							cur_body.hegith_calib = height_cal;
 						}
 						else
 						{
@@ -391,7 +439,7 @@ void* getVideoBodyFollowParam(void*)
 			  {
 			   srv_addr.sun_family=AF_UNIX;
 			   strncpy(srv_addr.sun_path,UNIX_DOMAIN,sizeof(srv_addr.sun_path)-1);
-			   unlink(UNIX_DOMAIN);
+
 			   ret=bind(listen_fd,(struct sockaddr*)&srv_addr,sizeof(srv_addr));
 			   if(ret==-1)
 			   {
@@ -452,10 +500,56 @@ void* getVideoBodyFollowParam(void*)
 }
 //cyc people detect end
 
+
+/*******************communicate with qcamvid************************************/
+void* communicateWithQcamvid(void*)
+{
+	DEBUG("communicateWithQcamvid start");
+
+	int socket_cli;
+
+	struct sockaddr_in address;
+	bzero(&address, sizeof(address));
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = inet_addr("127.0.0.1");
+	address.sin_port = htons(DOMAIN_PORT);
+
+	socket_cli = socket(AF_INET, SOCK_DGRAM, 0);
+	int send_num = 0;
+
+	while(true)
+	{
+		if (send_panorama_flag)
+		{
+			send_num = sendto(socket_cli, panorama_buff, DOMAIN_BUFF_SIZE, 0, (struct sockaddr*)&address, sizeof(address));
+			DEBUG("panorama_buff=%s send_num=%d\n", panorama_buff,send_num);
+			send_panorama_flag = false;
+		}
+
+		if (send_face_follow_swither_flag)
+		{
+			send_num = sendto(socket_cli, face_follow_swither_buff, DOMAIN_BUFF_SIZE, 0, (struct sockaddr*)&address, sizeof(address));
+			DEBUG("face_follow_swither_buff=%s send_num=%d\n", face_follow_swither_buff,send_num);
+			send_face_follow_swither_flag = false;
+		}
+
+		if (send_body_follow_swither_flag)
+		{
+			send_num = sendto(socket_cli, body_follow_swither_buff, DOMAIN_BUFF_SIZE, 0, (struct sockaddr*)&address, sizeof(address));
+			DEBUG("body_follow_swither_buff=%s send_num=%d\n", body_follow_swither_buff,send_num);
+			send_body_follow_swither_flag = false;
+		}
+		usleep(2000);		//2ms
+	}
+}
+
+
 int main(int argc, char* argv[])
 {
-	//only keep 10 log files
-	system("find /home/linaro/dev/examples/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +5|awk '{print $9}'| xargs rm -rf");
+	/*
+	//only keep 5 log files
+	//system("find /home/linaro/dev/examples/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +5|awk '{print $9}'| xargs rm -rf");
+	system("find /home/linaro/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +5|awk '{print $9}'| xargs rm -rf");
 
 	time_t now;
 	struct tm *curTime;
@@ -463,10 +557,61 @@ int main(int argc, char* argv[])
 	curTime = localtime(&now);
 
 	char log_filename[256];
+
+
 	sprintf(log_filename,"/home/linaro/dev/examples/log_snav_%04d-%02d-%02d-%02d-%02d-%02d",
 							curTime->tm_year+1900,curTime->tm_mon+1,curTime->tm_mday,
 							curTime->tm_hour,curTime->tm_min,curTime->tm_sec);
+
+	sprintf(log_filename,"/home/linaro/log_snav_%04d-%02d-%02d-%02d-%02d-%02d",
+							curTime->tm_year+1900,curTime->tm_mon+1,curTime->tm_mday,
+							curTime->tm_hour,curTime->tm_min,curTime->tm_sec);
+	*/
+
+
+	//confirm logfile name start
+	FILE *fp_count_read;
+	FILE *fp_count_write;
+	int log_count=0;
+
+	if ((fp_count_read = fopen("/home/linaro/snav_proxy_count", "a+")) != NULL)
+	{
+		char str[2];
+
+		if (fscanf(fp_count_read, "%d", &log_count) != EOF)
+		{
+			DEBUG("snav_proxy_count=%d\n", log_count);
+			if (log_count>=0)
+			{
+				log_count++;
+			}
+		}
+		else
+		{
+			DEBUG("snav_proxy_count first time\n");
+			log_count = 1;
+		}
+		fclose(fp_count_read);
+
+		if ((fp_count_write = fopen("/home/linaro/snav_proxy_count", "w+")) != NULL)
+		{
+			sprintf(str, "%d", log_count);
+			fwrite(&str, strlen(str), 1, fp_count_write);
+			fclose(fp_count_write);
+		}
+	}
+
+	//only keep 5 log files
+	system("find /home/linaro/ -type f -name 'log_snav*'|xargs -r ls -l|head -n -5|awk '{print $9}'| xargs rm -rf");
+
+	char log_filename[256];
+
+ 	sprintf(log_filename,"/home/linaro/log_snav_%04d", log_count);
+
 	DEBUG("log_filename=%s\n", log_filename);
+	//confirm logfile name end
+
+
 
 	FILE *fp;
 	if ((fp = fopen(log_filename, "w+")) != NULL)
@@ -488,14 +633,14 @@ int main(int argc, char* argv[])
 	    result = pthread_attr_init(&thread_attr);
 	    if(result !=0)
 	    {
-	        perror("Attribute creation failed");
+	        perror(" face_body_follow_thread Attribute creation failed");
 	        continue;
 	    }
 
 	    result = pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);
 	    if(result !=0)
 	    {
-	        perror("Setting detached attribute failed");
+	        perror("face_body_follow_thread Setting detached attribute failed");
 	        pthread_attr_destroy(&thread_attr);
 	        continue;
 	    }
@@ -518,10 +663,60 @@ int main(int argc, char* argv[])
 		pthread_attr_destroy(&thread_attr);
 	}
 
+	//create the communication with qcamvid process
+	bool communication_with_qcamvid_flag = false;
+	while(!communication_with_qcamvid_flag)
+	{
+		pthread_t communication_with_qcamvid_thread;
+	    pthread_attr_t thread_attr;
+	    int result;
+
+	    result = pthread_attr_init(&thread_attr);
+	    if(result !=0)
+	    {
+	        perror("communication_with_qcamvid_thread Attribute creation failed");
+	        continue;
+	    }
+
+	    result = pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);
+	    if(result !=0)
+	    {
+	        perror("communication_with_qcamvid_thread Setting detached attribute failed");
+	        pthread_attr_destroy(&thread_attr);
+	        continue;
+	    }
+
+		DEBUG("create communication_with_qcamvid thread\n");
+
+		result = pthread_create(&communication_with_qcamvid_thread,&thread_attr,communicateWithQcamvid, NULL);
+	    if(result !=0)
+	    {
+	    	perror("Thread communication_with_qcamvid_thread creation failed");
+	    	pthread_attr_destroy(&thread_attr);
+	        continue;
+	    }
+		else
+		{
+			communication_with_qcamvid_flag = true;
+		}
+
+		pthread_attr_destroy(&thread_attr);
+	}
+
+	float speed_coefficient = 1.0f;	//0.5f;
+	float height_limit = 30.0f;	//m
+	float distance_limit = 60.0f;	//m
+	float distance_in_xy = 0;
+
+	bool confirm_land = false;
+
+	static double t_optic_flow_start = 0;
+
 	char udp_receive_data[MAX_BUFF_LEN];
 	char result_to_client[MAX_BUFF_LEN];
-
 	bool bLocalUdpFlag = false;
+
+	char drone_state_error[MAX_BUFF_LEN];
 
 	int	 udpOverTimeCount = 0;
 	bool bHaveUdpFlag = false;
@@ -596,7 +791,7 @@ int main(int argc, char* argv[])
 	vector<Position> panorama_positions;
 
 	float vel_target = 0.75;	 //m/sec
-	float vel_circle_max = 1.2f;
+	float vel_circle_max = 0.9f;
 	int point_count = 72;
 	float angle_per = 2*M_PI/point_count;
 
@@ -607,8 +802,6 @@ int main(int argc, char* argv[])
 	int loop_counter = 0;
 
 	static bool task_take_off_in_progress = true;
-
-	DEBUG("snav_handler start!\n");
 
 	SnavCachedData* snav_data = NULL;
 	if (sn_get_flight_data_ptr(sizeof(SnavCachedData), &snav_data) != 0)
@@ -634,7 +827,6 @@ int main(int argc, char* argv[])
 	setsockopt(server_udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout_udp, sizeof(struct timeval));
 	setsockopt(server_udp_sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout_udp, sizeof(struct timeval));
 
-	// Begin loop
 	while (true)
 	{
 		int length = 0;
@@ -706,6 +898,11 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		//for limit optic flow get none smaple_size
+		struct timeval tv_for_record_optic_flow;
+		gettimeofday(&tv_for_record_optic_flow, NULL);
+		double t_optic_flow_now = tv_for_record_optic_flow.tv_sec + tv_for_record_optic_flow.tv_usec * 1e-6;
+
 		// Always need to call this
 		if (sn_update_data() != 0)
 		{
@@ -759,12 +956,16 @@ int main(int argc, char* argv[])
 			//check the drone status
 			drone_state = DroneState::NORMAL;
 
+			memset(drone_state_error,0,MAX_BUFF_LEN);
+			strcpy(drone_state_error, "drone_state_error");
+
 			CpuStats cpu_status = snav_data->cpu_stats;
 			for(int j = 0; j < 10; j++)
 			{
 				if (cpu_status.temp[j] >= 80)
 				{
 					drone_state = DroneState::CPU_OVER_HEAT;
+					strcat(drone_state_error, ":2");
 				}
 				break;
 			}
@@ -772,6 +973,7 @@ int main(int argc, char* argv[])
 			if (props_state == SN_PROPS_STATE_UNKNOWN)
 			{
 				drone_state = DroneState::MOTOR_ERROR;
+				strcat(drone_state_error, ":1");
 			}
 
 			SnDataStatus imu_status = (SnDataStatus) snav_data->data_status.imu_0_status;
@@ -785,41 +987,68 @@ int main(int argc, char* argv[])
 			if (mag_status != SN_DATA_VALID)
 			{
 				drone_state = DroneState::MAG_ERROR;
+				strcat(drone_state_error, ":5");
 			}
 
 			if (gps_status != SN_DATA_VALID)
 			{
 				drone_state = DroneState::GPS_ERROR;
+				strcat(drone_state_error, ":6");
 			}
 
 			if (baro_status != SN_DATA_VALID)
 			{
 				drone_state = DroneState::BARO_ERROR;
-			}
-			*/
-
-			/*
-			if (mode != SN_OPTIC_FLOW_POS_HOLD_MODE)
-			{
-				drone_state = DroneState::MODE_ERROR;
+				strcat(drone_state_error, ":4");
 			}
 			*/
 
 			if (sonar_status != SN_DATA_VALID)
 			{
 				drone_state = DroneState::SONAR_ERROR;
+				strcat(drone_state_error, ":7");
 			}
 
 			if (optic_flow_status != SN_DATA_VALID)
 			{
 				drone_state = DroneState::OPTIC_FLOW_ERROR;
+				strcat(drone_state_error, ":8");
 			}
 
 			if (imu_status != SN_DATA_VALID)
 			{
 				drone_state = DroneState::IMU_ERROR;
+				strcat(drone_state_error, ":3");
 			}
+
+			if (mode != SN_OPTIC_FLOW_POS_HOLD_MODE)
+			{
+				if (mode == SN_EMERGENCY_LANDING_MODE)
+				{
+					drone_state = DroneState::EMERGENCY_LANDING_MODE;
+					strcat(drone_state_error, ":9");
+				}
+				else if (mode == SN_EMERGENCY_KILL_MODE)
+				{
+					drone_state = DroneState::EMERGENCY_KILL_MODE;
+					strcat(drone_state_error, ":10");
+				}
+				else
+				{
+					drone_state = DroneState::MODE_ERROR;
+					strcat(drone_state_error, ":11");
+				}
+			}
+
+			DEBUG("drone_state_error=%s\n",drone_state_error);
 			//check end
+
+
+			//for limit optic flow get none smaple_size
+			if (snav_data->optic_flow_0_raw.sample_size>0)
+			{
+				t_optic_flow_start = t_optic_flow_now;
+			}
 
 			string recv_udp_cmd;
 			vector<string> gpsparams_udp;
@@ -909,10 +1138,58 @@ int main(int argc, char* argv[])
 														,(snav_data->high_level_control_data.position_estimated[1]-y_est_startup)
 														,snav_data->high_level_control_data.position_estimated[2]);
 
-							if (snav_data->high_level_control_data.position_estimated[2]>5)
+							if ((snav_data->high_level_control_data.position_estimated[2]>1)
+								&& (snav_data->high_level_control_data.position_estimated[2]<=5))
 							{
-								cmd0 = cmd0*0.3f;
-								cmd1 = cmd1*0.3f;
+								DEBUG("sn_send_rc_command with speed_coefficient=%f\n",speed_coefficient);
+
+								cmd0 = cmd0*0.8f*speed_coefficient;
+								cmd1 = cmd1*0.8f*speed_coefficient;
+							}
+							else if ((snav_data->high_level_control_data.position_estimated[2]>5)
+								&& (snav_data->high_level_control_data.position_estimated[2]<=10))
+							{
+								cmd0 = cmd0*0.5f*speed_coefficient;
+								cmd1 = cmd1*0.5f*speed_coefficient;
+							}
+							else if ((snav_data->high_level_control_data.position_estimated[2]>10)
+								&& (snav_data->high_level_control_data.position_estimated[2]<=20))
+							{
+								cmd0 = cmd0*0.4f*speed_coefficient;
+								cmd1 = cmd1*0.4f*speed_coefficient;
+							}
+							else if ((snav_data->high_level_control_data.position_estimated[2]>20)
+								&& (snav_data->high_level_control_data.position_estimated[2]<=30))
+							{
+								cmd0 = cmd0*0.3f*speed_coefficient;
+								cmd1 = cmd1*0.3f*speed_coefficient;
+							}
+
+							//for limit optic flow get none smaple_size
+							if (t_optic_flow_now - t_optic_flow_start > 2)
+							{
+								cmd0 = 0;
+								cmd1 = 0;
+								cmd2 = 0;
+
+								DEBUG("[%d] optic_flow have not any sample_size over 2 secs(t_optic_flow_start:%lf, t_now:%lf), LOITER\n", loop_counter,t_optic_flow_start,t_optic_flow_now);
+
+								memset(result_to_client,0,MAX_BUFF_LEN);
+								memcpy(result_to_client, SNAV_INFO_OPTIC_FLOW_MISS_SAMPLE, MAX_BUFF_LEN);
+								length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+							}
+
+							//limit the height
+							if ((snav_data->high_level_control_data.position_estimated[2]>=height_limit)
+									&& (cmd2 > 0))
+							{
+								cmd2 = 0;
+
+								DEBUG("[%d] The drone have reached the limit height.\n", loop_counter);
+
+								memset(result_to_client,0,MAX_BUFF_LEN);
+								memcpy(result_to_client, SNAV_INFO_OVER_SAFE_HEIGHT, MAX_BUFF_LEN);
+								length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 							}
 
 							// Send the commands to Snapdragon Navigator with default RC options
@@ -1048,6 +1325,8 @@ int main(int argc, char* argv[])
 					strcat(result_to_client, flight_state_info);
 					strcat(result_to_client, STR_SEPARATOR);
 					strcat(result_to_client, drone_state_info);
+					//strcat(result_to_client, STR_SEPARATOR);
+					//strcat(result_to_client, drone_state_error);
 
 					DEBUG("rpy_info=%s\n",result_to_client);
 
@@ -1129,12 +1408,37 @@ int main(int argc, char* argv[])
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 					DEBUG("udp sendto SNAV_CMD_RETURN_FACE_FOLLOW length=%d\n",length);
 				}
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_CMD_FACE_FOLLOW_MODE) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_FACE_FOLLOW_MODE);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_CMD_RETURN_FACE_FOLLOW_MODE length=%d\n",length);
+				}
 				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_CMD_BODY_FOLLOW) == 0))
 				{
 					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_BODY_FOLLOW);
 
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 					DEBUG("udp sendto SNAV_CMD_RETURN_BODY_FOLLOW length=%d\n",length);
+				}
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_TASK_CONFIRM_LAND) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_TASK_CONFIRM_LAND_RETURN);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_TASK_CONFIRM_LAND_RETURN length=%d\n",length);
+				}
+				//for test
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare("speed_limit") == 0))
+				{
+					speed_coefficient = atof(gpsparams_udp[1].c_str());
+					DEBUG("udp receive  speed_coefficient=%f\n",speed_coefficient);
+				}
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare("height_limit") == 0))
+				{
+					height_limit = atof(gpsparams_udp[1].c_str());
+					DEBUG("udp receive  height_limit=%f\n",height_limit);
 				}
 			}
 
@@ -1203,10 +1507,16 @@ int main(int argc, char* argv[])
 				{
 					face_follow_switch = true;
 					body_follow_switch = false;
+
+					send_face_follow_swither_flag = true;
+					strcpy(face_follow_swither_buff, "fdon");
 				}
 				else
 				{
 					face_follow_switch = false;
+
+					send_face_follow_swither_flag = true;
+					strcpy(face_follow_swither_buff, "fdoff");
 				}
 			}
 
@@ -1222,16 +1532,39 @@ int main(int argc, char* argv[])
 				{
 					body_follow_switch = true;
 					face_follow_switch = false;
+
+					send_body_follow_swither_flag = true;
+					strcpy(body_follow_swither_buff, "bdon");
 				}
 				else
 				{
 					body_follow_switch = false;
+
+					send_body_follow_swither_flag = true;
+					strcpy(body_follow_swither_buff, "bdoff");
+				}
+			}
+
+			if ((gpsparams_udp.size() >= 2)
+				&& (gpsparams_udp[0].compare(SNAV_CMD_FACE_FOLLOW_MODE) == 0))
+			{
+				int flag = atoi(gpsparams_udp[1].c_str());
+
+				if (flag == 1)
+				{
+					face_rotate_switch = false;
+				}
+				else
+				{
+					face_rotate_switch = true;
 				}
 			}
 
 			static bool mission_has_begun = false;
 
-			if ((props_state == SN_PROPS_STATE_NOT_SPINNING) && (on_ground_flag == 1) && !mission_has_begun)
+			if ((props_state == SN_PROPS_STATE_NOT_SPINNING)
+				&& (on_ground_flag == 1)
+				&& (!mission_has_begun))
 			{
 				state = MissionState::ON_GROUND;
 			}
@@ -1363,6 +1696,10 @@ int main(int argc, char* argv[])
 						}
 					}
 				}
+				else if (props_state == SN_PROPS_STATE_NOT_SPINNING)
+				{
+					state = MissionState::STARTING_PROPS;
+				}
 			}
 			else if (state == MissionState::LANDING)
 			{
@@ -1379,10 +1716,30 @@ int main(int argc, char* argv[])
 					DEBUG("[%d] [Landing distance_to_ground]: [%f]\n",
 							loop_counter,snav_data->sonar_0_raw.range);
 
-					if (snav_data->sonar_0_raw.range <= 2.5 )
+					if (snav_data->sonar_0_raw.range <= 2.5)
+					{
+						//z_vel_des = -0.45;
+						z_vel_des = -0.2;	//for confirm land check
+					}
+
+					if ((snav_data->sonar_0_raw.range <= 1.0)
+						&& (snav_data->sonar_0_raw.range >= 0.2)
+						&& !confirm_land
+						&& (mode != SN_EMERGENCY_LANDING_MODE))
+					{
+						state = MissionState::LOITER;
+
+						sprintf(result_to_client,"%s",SNAV_TASK_SHOW_LAND_CONFIRM);
+
+						length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+						DEBUG("udp sendto SNAV_TASK_SHOW_LAND_CONFIRM length=%d\n",length);
+
+						continue;
+					}
+
+					if (snav_data->sonar_0_raw.range <= 1.0)
 					{
 						z_vel_des = -0.45;
-						//z_vel_des = -0.58;	//-0.56
 					}
 
 					if (snav_data->sonar_0_raw.range <= 0.3)
@@ -1486,8 +1843,9 @@ int main(int argc, char* argv[])
 
 						if ((current_position == 3) || (current_position == 6) || (current_position == 9))
 						{
+							/*
 							memset(result_to_client,0,MAX_BUFF_LEN);
-							sprintf(result_to_client,"%s",SNAV_CMD_PANORAMA_SNAPSHOT);
+							sprintf(result_to_client,"%s",SNAV_TASK_NEED_PANORAMA_SNAPSHOT);
 
 							strcat(result_to_client, STR_SEPARATOR);
 							if (current_position == 3)
@@ -1504,6 +1862,21 @@ int main(int argc, char* argv[])
 							}
 
 							length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+							*/
+
+							send_panorama_flag = true;
+							if (current_position == 3)
+							{
+								strcpy(panorama_buff, "snap,1");
+							}
+							else if (current_position == 6)
+							{
+								strcpy(panorama_buff, "snap,2");
+							}
+							else if (current_position == 9)
+							{
+								strcpy(panorama_buff, "snap,3");
+							}
 						}
 
 						if (current_position >= panorama_positions.size())
@@ -1953,6 +2326,8 @@ int main(int argc, char* argv[])
 			{
 				if (props_state == SN_PROPS_STATE_SPINNING)
 				{
+					confirm_land = false;
+
 					// Maintain current position
 					x_vel_des = 0;
 					y_vel_des = 0;
@@ -1971,6 +2346,15 @@ int main(int argc, char* argv[])
 					if(gpsparams_udp.size() >= 1 && (gpsparams_udp[0].compare(SNAV_CMD_LAND) ==0))
 					{
 						state = MissionState::LANDING;
+					}
+					else if (gpsparams_udp.size() >= 2
+							&& (gpsparams_udp[0].compare(SNAV_TASK_CONFIRM_LAND) ==0))
+					{
+						if (gpsparams_udp[1].compare("yes") ==0)
+						{
+							state = MissionState::LANDING;
+							confirm_land = true;
+						}
 					}
 					//panorama task
 					else if(gpsparams_udp.size() >= 2
@@ -2009,22 +2393,15 @@ int main(int argc, char* argv[])
 						circle_mission = true;
 						calcCirclePoint = true;
 
-						if (radius <= 2)
+						if (radius<=5.0)
 						{
-							point_count = ((int)radius)*36;
-							vel_target = 0.5;	 //m/sec
+							point_count = 36;
 						}
 						else
 						{
-							point_count = ((int)radius)*36;
-							vel_target = 0.3*radius;	//0.5*radius;	 //m/sec
-
-							if (vel_target>vel_circle_max)
-							{
-								vel_target = vel_circle_max;
-							}
+							point_count = 72;
 						}
-
+						vel_target = 0.75;	 //m/sec
 						angle_per = 2*M_PI/point_count;
 
 						DEBUG("LOITER circle: radius,clockwise,point_count,vel_target,angle_per:%f,%d,%d,%f,%f\n",
@@ -2398,11 +2775,109 @@ int main(int argc, char* argv[])
 										,(snav_data->high_level_control_data.position_estimated[1]-y_est_startup)
 										,snav_data->high_level_control_data.position_estimated[2]);
 
-			if (snav_data->high_level_control_data.position_estimated[2]>5)
+			if ((snav_data->high_level_control_data.position_estimated[2]>1)
+				&& (snav_data->high_level_control_data.position_estimated[2]<=5))
 			{
-				cmd0 = cmd0*0.3f;
-				cmd1 = cmd1*0.3f;
+				DEBUG("sn_send_rc_command with speed_coefficient=%f\n",speed_coefficient);
+
+				cmd0 = cmd0*0.8f*speed_coefficient;
+				cmd1 = cmd1*0.8f*speed_coefficient;
 			}
+			else if ((snav_data->high_level_control_data.position_estimated[2]>5)
+				&& (snav_data->high_level_control_data.position_estimated[2]<=10))
+			{
+				cmd0 = cmd0*0.5f*speed_coefficient;
+				cmd1 = cmd1*0.5f*speed_coefficient;
+			}
+			else if ((snav_data->high_level_control_data.position_estimated[2]>10)
+				&& (snav_data->high_level_control_data.position_estimated[2]<=20))
+			{
+				cmd0 = cmd0*0.4f*speed_coefficient;
+				cmd1 = cmd1*0.4f*speed_coefficient;
+			}
+			else if ((snav_data->high_level_control_data.position_estimated[2]>20)
+				&& (snav_data->high_level_control_data.position_estimated[2]<=30))
+			{
+				cmd0 = cmd0*0.3f*speed_coefficient;
+				cmd1 = cmd1*0.3f*speed_coefficient;
+			}
+
+			//for limit optic flow get none smaple_size
+			if (t_optic_flow_now - t_optic_flow_start > 2)
+			{
+				cmd0 = 0;
+				cmd1 = 0;
+				cmd2 = 0;
+
+				DEBUG("[%d] optic_flow have not any sample_size over 2 secs(t_optic_flow_start:%lf, t_now:%lf), LOITER\n", loop_counter,t_optic_flow_start,t_optic_flow_now);
+
+				memset(result_to_client,0,MAX_BUFF_LEN);
+				memcpy(result_to_client, SNAV_INFO_OPTIC_FLOW_MISS_SAMPLE, MAX_BUFF_LEN);
+				length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+			}
+
+			//limit the height
+			if ((snav_data->high_level_control_data.position_estimated[2]>=height_limit)
+				&& (cmd2 > 0))
+			{
+				cmd2 = 0;
+
+				DEBUG("[%d] The drone have reached the limit height.\n", loop_counter);
+
+				memset(result_to_client,0,MAX_BUFF_LEN);
+				memcpy(result_to_client, SNAV_INFO_OVER_SAFE_HEIGHT, MAX_BUFF_LEN);
+				length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+			}
+
+
+			/*
+			//limit the distance
+			distance_in_xy = sqrt((x_est_startup-x_est)*(x_est_startup-x_est)+
+									(y_est_startup-y_est)*(y_est_startup-y_est));
+
+			DEBUG("[%d] distance_in_xy=%f\n", loop_counter, distance_in_xy);
+
+			if (distance_in_xy >= distance_limit)
+			{
+				float yaw_diff = yaw_est - yaw_est_startup;
+
+				if(yaw_diff > M_PI)
+				{
+					yaw_diff = yaw_diff -2*M_PI;
+				}
+				else if (yaw_diff < -M_PI)
+				{
+					yaw_diff = yaw_diff + 2*M_PI;
+				}
+
+				DEBUG("[%d] yaw_diff,yaw_est,yaw_est_startup:%f,%f,%f\n", loop_counter, yaw_diff,yaw_est,yaw_est_startup);
+
+				if (circle_cam_point_direct == 1)
+				{
+					if ((yaw_diff<0) && (yaw_diff>-0.5*M_PI))
+					{
+						if ((cmd0 < 0) || (cmd1 < 0))
+						{
+							cmd0 = 0;
+							cmd1 = 0;
+						}
+					}
+
+
+
+					if (yaw_est)
+					{
+
+					}
+				}
+				else if (circle_cam_point_direct == -1)
+				{
+
+				}
+			}
+			*/
+
+
 
 			sn_send_rc_command(curSendMode, RC_OPT_LINEAR_MAPPING,
 			         cmd0, cmd1, cmd2, cmd3);
