@@ -9,7 +9,7 @@
 #include "snav_cached_data.h"
 #include "snav_types.h"
 
-#define VERSION "1.2.0"
+#define VERSION "1.2.12"
 #define DEPRECATED __attribute__((deprecated))
 
 /** @file */
@@ -19,9 +19,7 @@ extern "C"{
 #endif
 
 
-/** @addtogroup sn_interface
-@{ */
-/**
+/** @ingroup sn_interface
  * Updates the internal cache of flight control data.
  *
  * @detdesc
@@ -39,7 +37,14 @@ extern "C"{
  */
 int sn_update_data();
 
+
+/** @addtogroup sn_interface_deprecated
+@{ */
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the current mode from the internal cache of flight control data.
  *
  * @datatypes
@@ -59,15 +64,14 @@ int sn_update_data();
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_mode(SnMode *mode_id);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_mode(SnMode *mode_id);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the current state of propellers from the internal cache of flight control
  * data.
  *
@@ -84,19 +88,14 @@ DEPRECATED int sn_get_mode(SnMode *mode_id);
  * @return
  * - 0 for success
  * - -1 for failure (flight software non-functional)
- *
- * @dependencies
- * The sn_update_data() function must be called to refresh the internal cache of
- * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_props_state(SnPropsState *props_state);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_props_state(SnPropsState *props_state);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the on ground flag from the internal cache of flight control data.
  *
  * @param[out] on_ground_flag Pointer to the flag to be set to 0 if flight control
@@ -114,16 +113,15 @@ DEPRECATED int sn_get_props_state(SnPropsState *props_state);
  *
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
- * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
+ * flight control data. @newpage
  */
-DEPRECATED int sn_get_on_ground_flag(int *on_ground_flag);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_on_ground_flag(int *on_ground_flag);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest battery voltage from the internal cache of flight control
  * data.
  *
@@ -136,16 +134,11 @@ DEPRECATED int sn_get_on_ground_flag(int *on_ground_flag);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_voltage(float *voltage);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_voltage(float *voltage);
+/** @} */ /* end_addtogroup sn_interface_deprecated */
 
-
-/**
+/** @ingroup sn_interface
  * Detects whether GPS is enabled.
  *
  * @param[out] gps_enabled
@@ -161,7 +154,13 @@ DEPRECATED int sn_get_voltage(float *voltage);
  */
 int sn_is_gps_enabled(int * gps_enabled);
 
+/** @addtogroup sn_interface_deprecated
+@{ */
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest IMU data status from the internal cache of flight control
  * data.
  *
@@ -177,16 +176,15 @@ int sn_is_gps_enabled(int * gps_enabled);
  *
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
- * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
+ * flight control data. @newpage
  */
-DEPRECATED int sn_get_imu_status(SnDataStatus *status);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_imu_status(SnDataStatus *status);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest IMU temperature reading from the internal cache of flight
  * control data.
  *
@@ -200,16 +198,14 @@ DEPRECATED int sn_get_imu_status(SnDataStatus *status);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
- * @newpage
  */
-DEPRECATED int sn_get_imu_temp(float *temp);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_imu_temp(float *temp);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the bias compensated linear acceleration vector from the internal cache
  * of flight control data. The vector is represented with respect to the
  * vehicle's body frame.
@@ -227,15 +223,14 @@ DEPRECATED int sn_get_imu_temp(float *temp);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_bias_compensated_lin_acc(float *ax, float *ay, float *az);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_bias_compensated_lin_acc(float *ax, float *ay, float *az);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the bias compensated angular velocity vector from the internal cache of
  * flight control data. The vector is represented with respect to the vehicle's
  * body frame.
@@ -254,15 +249,14 @@ DEPRECATED int sn_get_bias_compensated_lin_acc(float *ax, float *ay, float *az);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_bias_compensated_ang_vel(float *wx, float *wy, float *wz);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_bias_compensated_ang_vel(float *wx, float *wy, float *wz);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest barometer data status from the internal cache of flight
  * control data.
  *
@@ -279,15 +273,14 @@ DEPRECATED int sn_get_bias_compensated_ang_vel(float *wx, float *wy, float *wz);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_baro_status(SnDataStatus *status);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_baro_status(SnDataStatus *status);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest barometer data from the internal cache of flight control data.
  *
  * @param[out] pressure Pointer to the float to be set to the latest barometer
@@ -302,16 +295,14 @@ DEPRECATED int sn_get_baro_status(SnDataStatus *status);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
- * @newpage
  */
-DEPRECATED int sn_get_baro_data(float *pressure, float *temp);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_baro_data(float *pressure, float *temp);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest RC data status from the internal cache of
  * flight control data.
  *
@@ -328,15 +319,14 @@ DEPRECATED int sn_get_baro_data(float *pressure, float *temp);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_rc_status(SnDataStatus *status);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_rc_status(SnDataStatus *status);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest RC data from the internal cache of flight
  * control data.
  *
@@ -354,16 +344,15 @@ DEPRECATED int sn_get_rc_status(SnDataStatus *status);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_rc_data(unsigned int *channel_vals, unsigned int size,
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_rc_data(unsigned int *channel_vals, unsigned int size,
     unsigned int *used);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest magnetometer data status from the internal cache of flight
  * control data.
  *
@@ -380,15 +369,14 @@ DEPRECATED int sn_get_rc_data(unsigned int *channel_vals, unsigned int size,
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_mag_status(SnDataStatus *status);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_mag_status(SnDataStatus *status);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest GPS data status from the internal cache of flight control data.
  *
  * @datatypes
@@ -403,15 +391,14 @@ DEPRECATED int sn_get_mag_status(SnDataStatus *status);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_gps_status(SnDataStatus *status);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_gps_status(SnDataStatus *status);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest sonar data status from the internal cache of flight control
  * data.
  *
@@ -427,15 +414,14 @@ DEPRECATED int sn_get_gps_status(SnDataStatus *status);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_sonar_status(SnDataStatus *status);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_sonar_status(SnDataStatus *status);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest sonar data from the internal cache of flight control data.
  *
  * @param[out] range Pointer to the float to be set to the latest sonar range
@@ -448,16 +434,14 @@ DEPRECATED int sn_get_sonar_status(SnDataStatus *status);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
- * @newpage
  */
-DEPRECATED int sn_get_sonar_data(float *range);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_sonar_data(float *range);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest optic flow data status from the internal cache of flight
  * control data.
  *
@@ -473,16 +457,15 @@ DEPRECATED int sn_get_sonar_data(float *range);
  *
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
- * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
+ * flight control data. @newpage
  */
-DEPRECATED int sn_get_optic_flow_status(SnDataStatus *status);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_optic_flow_status(SnDataStatus *status);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the latest optic flow sample size from the internal cache of flight
  * control data. Sample size refers to the number of inlier features being used by the
  * optic flow algorithm.
@@ -497,15 +480,14 @@ DEPRECATED int sn_get_optic_flow_status(SnDataStatus *status);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_optic_flow_sample_size(int *sample_size);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_optic_flow_sample_size(int *sample_size);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the control loop frequency from the internal cache of flight control data.
  *
  * @param[out] frequency
@@ -518,16 +500,15 @@ DEPRECATED int sn_get_optic_flow_sample_size(int *sample_size);
  *
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
- * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
+ * flight control data. @newpage
  */
-DEPRECATED int sn_get_control_loop_frequency(float *frequency);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_control_loop_frequency(float *frequency);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the estimated position vector from the internal cache of flight control
  * data.
  *
@@ -547,16 +528,11 @@ DEPRECATED int sn_get_control_loop_frequency(float *frequency);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
- * @newpage
  */
-DEPRECATED int sn_get_position_est(float *x, float *y, float *z);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_position_est(float *x, float *y, float *z);
+/** @} */ /* end_addtogroup sn_interface_deprecated */
 
-/**
+/** @ingroup sn_interface
  * Gets the estimated velocity vector from the internal cache of flight control
  * data.
  *
@@ -571,16 +547,17 @@ DEPRECATED int sn_get_position_est(float *x, float *y, float *z);
  *
  * @return
  * - 0 for success
- * - -1 for failure (flight software non-functional)
- *
- * @dependencies
- * The sn_update_data() function must be called to refresh the internal cache of
- * flight control data.
- *
+ * - -1 for failure (flight software non-functional) @newpage
  */
 int sn_get_velocity_est(float *vx, float *vy, float *vz);
 
+/** @addtogroup sn_interface_deprecated
+@{ */
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the estimated yaw angle from the internal cache of flight control data.
  *
  * @param[out] yaw Pointer to the float to be set to estimated yaw angle (radians).
@@ -598,15 +575,14 @@ int sn_get_velocity_est(float *vx, float *vy, float *vz);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_yaw_est(float *yaw);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_yaw_est(float *yaw);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the desired position vector from the internal cache of flight control
  * data.
  *
@@ -630,16 +606,15 @@ DEPRECATED int sn_get_yaw_est(float *yaw);
  *
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
- * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
+ * flight control data. @newpage
  */
-DEPRECATED int sn_get_position_des(float *x, float *y, float *z);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_position_des(float *x, float *y, float *z);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the desired yaw angle from the internal cache of flight control data.
  *
  * @param[out] yaw
@@ -658,15 +633,11 @@ DEPRECATED int sn_get_position_des(float *x, float *y, float *z);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_yaw_des(float *yaw);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_yaw_des(float *yaw);
+/** @} */ /* end_addtogroup sn_interface_deprecated */
 
-/**
+/** @ingroup sn_interface
  * Gets the estimated quaternion from the body frame to world frame from
  * the internal cache of flight control data.
  *
@@ -691,7 +662,13 @@ DEPRECATED int sn_get_yaw_des(float *yaw);
  */
 int sn_get_quat_est(float *w,float *x,float *y,float *z);
 
+/** @addtogroup sn_interface_deprecated
+@{ */
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the estimated rotation matrix from body frame to world frame from
  * internal cache of flight control data.
  *
@@ -710,15 +687,14 @@ int sn_get_quat_est(float *w,float *x,float *y,float *z);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data.
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_rot_est(float R[3][3]);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_rot_est(float R[3][3]);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the estimated ZYX Euler angles from body frame to world frame from
  * internal cache of flight control data.
  *
@@ -743,16 +719,15 @@ DEPRECATED int sn_get_rot_est(float R[3][3]);
  *
  * @sa
  * sn_get_rot_est() \n
- * sn_get_quat_est()
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
+ * sn_get_quat_est() @newpage
  */
-DEPRECATED int sn_get_euler_angles_est(float *roll, float *pitch, float *yaw);
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_euler_angles_est(float *roll, float *pitch, float *yaw);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the ESC hardware versions from the internal cache of flight control
  * data.
  *
@@ -778,16 +753,15 @@ DEPRECATED int sn_get_euler_angles_est(float *roll, float *pitch, float *yaw);
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data. @newpage
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_esc_hw_versions(int *hw_versions, unsigned int size,
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_esc_hw_versions(int *hw_versions, unsigned int size,
     unsigned int *used);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the ESC software versions from the internal cache of flight control
  * data.
  *
@@ -813,16 +787,15 @@ DEPRECATED int sn_get_esc_hw_versions(int *hw_versions, unsigned int size,
  * @dependencies
  * The sn_update_data() function must be called to refresh the internal cache of
  * flight control data. @newpage
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  */
-DEPRECATED int sn_get_esc_sw_versions(int *sw_versions, unsigned int size,
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_esc_sw_versions(int *sw_versions, unsigned int size,
     unsigned int *used);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the packet counter feedback data from the ESCs from the internal cache of
  * flight control data.
  *
@@ -857,17 +830,16 @@ DEPRECATED int sn_get_esc_sw_versions(int *sw_versions, unsigned int size,
  *
  * @sa
  * sn_send_esc_rpm() \n
- * sn_send_esc_pwm()
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
+ * sn_send_esc_pwm() @newpage
  */
-DEPRECATED int sn_get_esc_packet_cntr_feedback(unsigned int *cntr_feedback,
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_esc_packet_cntr_feedback(unsigned int *cntr_feedback,
     unsigned int size, unsigned int *used);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the ESC-generated RPM feedback data from the internal cache of flight
  * control data.
  *
@@ -900,17 +872,16 @@ DEPRECATED int sn_get_esc_packet_cntr_feedback(unsigned int *cntr_feedback,
  * @sa
  * sn_send_esc_rpm() \n
  * sn_send_esc_pwm()
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  * @newpage
  */
-DEPRECATED int sn_get_esc_rpm_feedback(int *rpm_feedback, unsigned int size,
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_esc_rpm_feedback(int *rpm_feedback, unsigned int size,
     unsigned int *used);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the power feedback data from the ESCs
  * from the internal cache of flight control data.
  *
@@ -947,17 +918,16 @@ DEPRECATED int sn_get_esc_rpm_feedback(int *rpm_feedback, unsigned int size,
  * @sa
  * sn_send_esc_rpm() \n
  * sn_send_esc_pwm()
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  * @newpage
  */
-DEPRECATED int sn_get_esc_power_feedback(int *power_feedback, unsigned int size,
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_esc_power_feedback(int *power_feedback, unsigned int size,
     unsigned int *used);
 
 /**
+ * @deprecated
+ * This function will be removed in a future release.
+ * Use the sn_get_flight_data_ptr() function instead.
+ *
  * Gets the voltage feedback data from the ESCs from the internal cache of flight
  * control data.
  *
@@ -990,16 +960,14 @@ DEPRECATED int sn_get_esc_power_feedback(int *power_feedback, unsigned int size,
  * @sa
  * sn_send_esc_rpm() \n
  * sn_send_esc_pwm()
- *
- * @deprecated
- * This function will be removed in a future release (TBD). Use
- * sn_get_flight_data_ptr() instead.
- *
  * @newpage
  */
-DEPRECATED int sn_get_esc_voltage_feedback(float *voltage_feedback, unsigned int size,
+/** @cond */ DEPRECATED /** @endcond */ int sn_get_esc_voltage_feedback(float *voltage_feedback, unsigned int size,
     unsigned int *used);
+/** @} */ /* end_addtogroup sn_interface_deprecated */
 
+/** @addtogroup sn_interface
+@{ */
 /**
  * Gets the ESC state feedback data from from the internal cache of flight control
  * data.
@@ -1423,6 +1391,7 @@ int sn_send_esc_pwm(int *pwm_data, unsigned int size, int fb_id);
  * @return
  * - 0 if command received
  * - -1 for failure (flight software non-functional)
+ * - -2 if any command is NaN
  *
  * @dependencies
  * None.
@@ -1581,6 +1550,7 @@ float sn_get_max_value(SnRcCommandType type, int index);
  * @return
  * - 0 if command received
  * - -1 for failure (flight software non-functional)
+ * - -2 if any input arguments are NaN
  *
  * @dependencies
  * None. @newpage
@@ -1602,6 +1572,7 @@ int sn_send_thrust_att_ang_vel_command(float thrust, float qw, float qx,
  * @return
  * - 0 if command received
  * - -1 for failure (flight software non-functional)
+ * - -2 if the voltage is less than or equal to zero, or is NaN
  *
  * @dependencies
  * None.
@@ -1610,18 +1581,46 @@ int sn_set_battery_voltage(float voltage);
 
 
 /**
- * Get pointer to cached snav data structure.
+ * Gets the pointer to the Snapdragon Navigator cached data structure.
  *
- * @param[in] size_cached_struct size of structure. This is used to ensure the header
- * file stays in sync. This argument should be sizeof(SnavCachedData)
- * @param[out] snav_cached_data_struct pointer to be filled with cached data structure
- * pointe. This structure will be udpated duing a call to sn_update_data().
+ * @datatypes
+ * #SnavCachedData
+ *
+ * @param[in] size_cached_struct       Structure size. Ensures that the header
+ *                                     file stays in sync. This argument must be
+ *                                     sizeof(SnavCachedData).
+ * @param[out] snav_cached_data_struct Pointer to be filled with the cached data
+ *                                     structure pointer values. This structure is
+ *                                     updated with a call to sn_update_data().
  *
  * @return
- * - 0 if flight data ptr returned successfully
- * - -1 for failure to get pointer to flight data
+ * - 0 if flight data pointer returns successfully
+ * - -1 for failure to get the pointer to flight data
  */
 int sn_get_flight_data_ptr(int size_cached_struct, SnavCachedData **snav_cached_data_struct);
+
+
+/**
+ * Sets the LED colors, overriding SNAV LED colors
+ *
+ * @param[in] led_colors_input_array array of RGB triplets (range for each is 0-255).
+ * @param[in] led_colors_size        size of the input color array - must be greater than zero, less than 25, and multiple of 3
+ * @param[in] led_colors_timeout_us  timeout in microseconds for SNAV to take over LED control after API color commands stop
+ *
+ * @detdesc
+ * This function overrides the internal output of the LED colors. Currently only single RGB triplet is used (first three bytes)
+ * Timeout variable specifies the time in microseconds when LED output should switch back to SNAV control after API color commands stop updating.
+ * Color values are interpreted as binary for now (0 = off, otherwise = on)
+ *
+ * @return
+ * - 0 if command received
+ * - -1 critical failure (flight software non-functional)
+ * - -2 bad length of color data array
+ * - -3 negative value provided as timeout
+ * @dependencies
+ * None.
+ */
+int sn_set_led_colors(const uint8_t * led_colors_input_array, int led_colors_size, int led_colors_timeout_us);
 
 
 /** @} */ /* end_addtogroup sn_interface */

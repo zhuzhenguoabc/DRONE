@@ -53,10 +53,18 @@ typedef enum
   /**< Body-relative 3D velocity and yaw rate using optic flow. */
   SN_VIO_POS_HOLD_MODE,
   /**< Body-relative 3D velocity and yaw rate using VIO. */
+  SN_THRUST_ATT_ANG_VEL_MODE,
+  /**< Thrust, attitude, and angular velocity. */
+  SN_PRESSURE_LANDING_MODE,
+  /**< Vertical velocity-controlled descent with zero roll/pitch. */
+  SN_PRESSURE_GPS_LANDING_MODE,
+  /**< 3D velocity-controlled descent. */
+  SN_GPS_GO_HOME_MODE,
+  /**< 3D velocity-controlled return to home position. @newpage */
 } SnMode;
 
 /**
- * Type of input commands.
+ * Input command types.
  */
 typedef enum
 {
@@ -71,7 +79,7 @@ typedef enum
 } SnInputCommandType;
 
 /**
- * RC command input source used.
+ * RC command input source.
  */
 typedef enum
 {
@@ -109,21 +117,29 @@ typedef enum
   /**< Command vehicle-relative X and Y speeds, Z speed, and yaw rate using
        visual inertial odometry (VIO). */
   SN_RC_NUM_CMD_TYPES
-  /**< Do not use -- Reserved to hold the number of RC command types. */
+  /**< Do not use -- Reserved to hold the number of RC command types. @newpage */
 } SnRcCommandType;
 
 /**
  * RC command options.
- * Each bit signifies a deviation from a linear transform and options can be or-ed
- * to form hybrid options  (e.g. RC_OPT_ENABLE_DEADBAND|RC_OPT_NON_LINEAR_TRANSFORMS)
+ * The options can be OR-ed to form hybrid options
+ * (e.g., RC_OPT_ENABLE_DEADBAND|RC_OPT_NON_LINEAR_TRANSFORMS).
  */
 typedef enum
 {
-  RC_OPT_LINEAR_MAPPING          =0, /**< Linear control (default). */
-  RC_OPT_ENABLE_DEADBAND         =1, /**< Enable deadband. */
-  RC_OPT_NON_LINEAR_TRANSFORMS   =2, /**< Non-linear transforms. */
-  RC_OPT_LOW_THRUST_YAW_DISABLE  =4, /**< Disbale yaw control at very low thrust */
-  RC_OPT_DEFAULT_RC              =7, /**< Default RC.  */
+  RC_OPT_LINEAR_MAPPING          =0,
+  /**< Linear control (default). */
+  RC_OPT_ENABLE_DEADBAND         =1,
+  /**< Enable deadband. */
+  RC_OPT_NON_LINEAR_TRANSFORMS   =2,
+  /**< Non-linear transforms. */
+  RC_OPT_LOW_THRUST_YAW_DISABLE  =4,
+  /**< Disable yaw control at very low thrust. */
+  RC_OPT_DEFAULT_RC              =7,
+  /**< Default RC.  */
+  RC_OPT_TRIGGER_LANDING         =8,
+  /**< Trigger landing. The vehicle determines which landing mode is appropriate
+       based on which sensors are available and what mode is active. */
 } SnRcCommandOptions;
 
 /**
@@ -152,7 +168,7 @@ typedef enum
   SN_DATA_STUCK,
   /**< Sensor data is unchanging. */
   SN_DATA_TIMEOUT,
-  /**< Sensor data has not been updated past data timeout threshold. */
+  /**< Sensor data has not been updated past the data timeout threshold. */
   SN_DATA_UNCALIBRATED,
   /**< Sensor data has not been calibrated. */
   SN_DATA_OFFSET_UNCALIBRATED,
@@ -164,13 +180,13 @@ typedef enum
   SN_DATA_STATUS_UNAVAILABLE,
   /**< Sensor data status unavailable. */
   SN_DATA_NOT_ORIENTED,
-  /**< Sensor data missing orientation parameter. */
+  /**< Sensor data missing the orientation parameter. */
   SN_DATA_NO_LOCK,
   /**< Sensor data unable to lock on. */
   SN_DATA_WARNING,
   /**< Sensor is in a warning state. */
   SN_DATA_TRANSITIONING
-  /**< Sensor data is transitioning. */
+  /**< Sensor data is transitioning. @newpage */
 } SnDataStatus;
 
 /**
@@ -200,6 +216,37 @@ typedef enum
   SN_CALIB_STATUS_CALIBRATED
   /**< Calibration data exists. */
 } SnCalibStatus;
+
+/**
+ * Spektrum data transmission mode. This value is used to request binding and display the current mode.
+ */
+typedef enum
+{
+  SN_RC_RECEIVER_MODE_UNKNOWN,
+  /**< Unknown DSM mode. */
+  SN_SPEKTRUM_MODE_DSM2_22,
+  /**< DSM2 22 ms (6-channel maximum, every 22 ms). */
+  SN_SPEKTRUM_MODE_DSM2_11,
+  /**< DSM2 11 ms (9-channel maximum, complete packet every 22 ms).  */
+  SN_SPEKTRUM_MODE_DSMX_22,
+  /**< DSMX 22 ms (6-channel maximum, every 22 ms). */
+  SN_SPEKTRUM_MODE_DSMX_11
+  /**< DSMX 11 ms (9-channel maximum, complete packet every 22 ms). */
+} SnRcReceiverMode;
+
+
+/**
+ * Supported GNSS receiver types.
+ */
+typedef enum
+{
+  SN_GNSS_RECEIVER_TYPE_UNKNOWN,
+  /**< Unknown receiver. */
+  SN_GNSS_RECEIVER_TYPE_CSR,
+  /**< CSR receiver. */
+  SN_GNSS_RECEIVER_TYPE_UBLOX,
+  /**< U-blox receiver.  */
+} SnGnssReceiverType;
 
 /** @} */ /* end_addtogroup sn_datatypes */
 

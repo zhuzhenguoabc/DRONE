@@ -3,9 +3,12 @@
  * Qualcomm Technologies Proprietary and Confidential.
  */
 
+#include <math.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "snapdragon_navigator.h"
@@ -18,6 +21,8 @@ void print_usage()
   printf("      a.k.a. dynamic accel calibration\n");
   printf("      WARNING: This will attempt to pilot the vehicle\n");
   printf("-t  Attempt to run the thermal IMU calibration\n");
+  printf("-r  Attempt to run the thermal IMU calibration with specified\n");
+  printf("      temperature ramp rate.  Units are C/min.\n");
   printf("-o  Attempt to run the optic flow camera yaw calibration\n");
   printf("-m  Attempt to run the magnetometer calibration\n");
   printf("      a.k.a. compass calibration\n");
@@ -45,6 +50,29 @@ typedef enum
   LANDING
 } MissionState;
 
+// Return codes for this program
+// Errors start with 3 because 1 and 2 have special meanings in bash
+typedef enum
+{
+  RESULT_CALIBRATION_SUCCESS = 0,         /**< Calibration completed successfully. */
+  RESULT_CALIBRATION_FAILURE = 3,         /**< Calibration started but did not complete successfully. */
+  RESULT_CALIBRATION_UNABLE_TO_START = 4, /**< Calibration was unable to start. */
+  RESULT_NO_CALIBRATION_SELECTED = 5,     /**< No calibration was selected. */
+  RESULT_SNAV_CACHED_DATA_ERROR = 6,      /**< Error getting pointer to SnavCachedData struct. */
+  RESULT_SNAV_COMM_ERROR = 7,             /**< Error communicating with SNAV. */
+} ProgramResult;
+
+// IMU temperature calibration controller
+#define   TEMP_CTRL_NUM_THREADS 4
+int       temp_ctrl_init();
+void      temp_ctrl_run(SnavCachedData* snav_data);
+void*     temp_ctrl_load_cpu(void* p_idx);
+uint64_t  get_time_us();
+float     temp_ctrl_pwm;
+float     temp_ctrl_rate;
+int       thread_idx[TEMP_CTRL_NUM_THREADS]; // Must be global scope.
+pthread_t threads[TEMP_CTRL_NUM_THREADS];
+
 int main(int argc, char* argv[])
 {
   int c;
@@ -53,7 +81,7 @@ int main(int argc, char* argv[])
   // Assume that vehicle is on ground when this program starts
   MissionState state = ON_GROUND;
 
-  while ((c = getopt(argc, argv, "sdtomvh")) != -1)
+  while ((c = getopt(argc, argv, "sdtomvhr:")) != -1)
   {
     switch(c)
     {
@@ -65,6 +93,11 @@ int main(int argc, char* argv[])
         break;
       case 't':
         calib = THERMAL_IMU_CALIB;
+        temp_ctrl_rate = 0;
+        break;
+      case 'r':
+        calib = THERMAL_IMU_CALIB;
+        temp_ctrl_rate = atof(optarg);
         break;
       case'o':
         calib = OPTIC_FLOW_CAM_CALIB;
@@ -74,33 +107,34 @@ int main(int argc, char* argv[])
         break;
       case 'v':
         printf("v%s\n",VERSION);
-        return -1;
+        return RESULT_NO_CALIBRATION_SELECTED;
       case'h':
         print_usage();
-        return -1;
+        return RESULT_NO_CALIBRATION_SELECTED;
       default:
         print_usage();
-        return -1;
+        return RESULT_NO_CALIBRATION_SELECTED;
     }
   }
 
   if (calib == NO_CALIB)
   {
     print_usage();
-    return -1;
+    return RESULT_NO_CALIBRATION_SELECTED;
   }
 
   SnavCachedData* snav_data = NULL;
   if (sn_get_flight_data_ptr(sizeof(SnavCachedData), &snav_data) != 0)
   {
     printf("\nFailed to get flight data pointer!\n");
-    return -1;
+    return RESULT_SNAV_CACHED_DATA_ERROR;
   }
 
   bool keep_going = true;
   bool calib_started = false;
   unsigned int attempt_number = 0;
   const unsigned int kMaxAttempts = 10;
+  ProgramResult program_result = RESULT_CALIBRATION_UNABLE_TO_START;
   while (keep_going)
   {
     static unsigned int loop_counter = 0;
@@ -110,6 +144,8 @@ int main(int argc, char* argv[])
     if(update_ret!=0)
     {
       printf("\nDetected likely failure in SN. Ensure it is running and attempt calibration call again.\n\n");
+      keep_going = false;
+      program_result = RESULT_SNAV_COMM_ERROR;
     }
     else
     {
@@ -131,11 +167,13 @@ int main(int argc, char* argv[])
           printf("[%u] Static accel calibration was completed successfully\n",
               loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_SUCCESS;
         }
         else if (snav_data->general_status.current_mode == SN_CALIBRATION_FAILURE && calib_started)
         {
           printf("[%u] Static accel calibration failed\n", loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_FAILURE;
         }
         else
         {
@@ -150,6 +188,7 @@ int main(int argc, char* argv[])
           {
             printf("[%u] Unable to start calibration\n", loop_counter);
             keep_going = false;
+            program_result = RESULT_CALIBRATION_UNABLE_TO_START;
           }
         }
       }
@@ -197,6 +236,19 @@ int main(int argc, char* argv[])
           }
 
           printf("[%u] Starting propellers.\n", loop_counter);
+
+          static unsigned int loop_counter_initial = 0;
+          if (loop_counter_initial == 0)
+          {
+            loop_counter_initial = loop_counter;
+          }
+
+          if (loop_counter - loop_counter_initial > 50)
+          {
+            printf("[%u] Unable to start propellers.\n", loop_counter);
+            keep_going = false;
+            program_result = RESULT_CALIBRATION_UNABLE_TO_START;
+          }
         }
 
         else if (state == TAKEOFF)
@@ -286,6 +338,7 @@ int main(int argc, char* argv[])
             if (++cntr > 100)
             {
               keep_going = false;
+              program_result = RESULT_CALIBRATION_SUCCESS;
             }
           }
           else if (snav_data->general_status.current_mode == SN_CALIBRATION_FAILURE && calib_started)
@@ -299,6 +352,7 @@ int main(int argc, char* argv[])
             if (++cntr > 100)
             {
               keep_going = false;
+              program_result = RESULT_CALIBRATION_FAILURE;
             }
           }
         }
@@ -307,6 +361,7 @@ int main(int argc, char* argv[])
         {
           printf("Error: unknown mission state. Exiting.\n");
           keep_going = false;
+          program_result = RESULT_CALIBRATION_FAILURE;
         }
 
         sn_send_rc_command(SN_RC_OPTIC_FLOW_POS_HOLD_CMD, RC_OPT_LINEAR_MAPPING, cmd0, cmd1, cmd2, cmd3);
@@ -321,8 +376,9 @@ int main(int argc, char* argv[])
           sn_get_imu_thermal_calibration_status(&status);
           if (status == SN_CALIB_STATUS_CALIBRATION_IN_PROGRESS)
           {
-            printf("[%u] Thermal IMU calibration is in progress\n",
-                loop_counter);
+            temp_ctrl_run(snav_data);
+            printf("[%u] Thermal IMU calibration is in progress (current temp = %6.2f C).\n",
+                   loop_counter,snav_data->imu_0_raw.temp);
           }
         }
         else if (snav_data->general_status.current_mode == SN_CALIBRATION_SUCCESS && calib_started)
@@ -330,15 +386,26 @@ int main(int argc, char* argv[])
           printf("[%u] Thermal IMU calibration was completed successfully\n",
               loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_SUCCESS;
         }
         else if (snav_data->general_status.current_mode == SN_CALIBRATION_FAILURE && calib_started)
         {
           printf("[%u] Thermal IMU calibration failed\n",
               loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_FAILURE;
         }
         else
         {
+          if (attempt_number == 0)
+          {
+            int temp_ctrl_init_ret = temp_ctrl_init();
+            if (temp_ctrl_init_ret != 0)
+            {
+              keep_going = false;
+              program_result = RESULT_CALIBRATION_UNABLE_TO_START;
+            }
+          }
           if (attempt_number < kMaxAttempts)
           {
             printf("[%u] Sending command (attempt %u) to start thermal imu calibration\n",
@@ -351,6 +418,7 @@ int main(int argc, char* argv[])
             printf("[%u] Unable to start calibration\n",
                 loop_counter);
             keep_going = false;
+            program_result = RESULT_CALIBRATION_UNABLE_TO_START;
           }
         }
       }
@@ -373,12 +441,14 @@ int main(int argc, char* argv[])
           printf("[%u] Optic flow camera yaw calibration was completed successfully\n",
               loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_SUCCESS;
         }
         else if (snav_data->general_status.current_mode == SN_CALIBRATION_FAILURE && calib_started)
         {
           printf("[%u] Optic flow camera yaw calibration failed\n",
               loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_FAILURE;
         }
         else
         {
@@ -393,6 +463,7 @@ int main(int argc, char* argv[])
           {
             printf("[%u] Unable to start calibration\n", loop_counter);
             keep_going = false;
+            program_result = RESULT_CALIBRATION_UNABLE_TO_START;
           }
         }
       }
@@ -415,11 +486,13 @@ int main(int argc, char* argv[])
           printf("[%u] Magnetometer calibration was completed successfully\n",
               loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_SUCCESS;
         }
         else if (snav_data->general_status.current_mode == SN_CALIBRATION_FAILURE && calib_started)
         {
           printf("[%u] Magnetometer calibration failed\n", loop_counter);
           keep_going = false;
+          program_result = RESULT_CALIBRATION_FAILURE;
         }
         else
         {
@@ -434,6 +507,7 @@ int main(int argc, char* argv[])
           {
             printf("[%u] Unable to start calibration\n", loop_counter);
             keep_going = false;
+            program_result = RESULT_CALIBRATION_UNABLE_TO_START;
           }
         }
       }
@@ -441,6 +515,7 @@ int main(int argc, char* argv[])
       else
       {
         keep_going = false;
+        program_result = RESULT_NO_CALIBRATION_SELECTED;
       }
     }
     loop_counter++;
@@ -450,6 +525,131 @@ int main(int argc, char* argv[])
   // Call sync to make sure any calibration files get written to disk
   system("sync");
 
+  return program_result;
+}
+
+int temp_ctrl_init()
+{
+  // legacy behavior if 0 rate is specified.
+  if (temp_ctrl_rate == 0)
+  {
+    return 0;
+  }
+
+  // init pwm and spawn the loading threads
+  temp_ctrl_pwm = 0;
+  int result;
+  int i;
+  for (i = 0; i < TEMP_CTRL_NUM_THREADS; ++i)
+  {
+    thread_idx[i] = i;
+    result = pthread_create(&threads[i], NULL, temp_ctrl_load_cpu, &thread_idx[i]);
+    if (result != 0)
+    {
+      printf("Error creating thread.\n");
+      return -1;
+    }
+  }
+
+  // preheat for 5 mins if negative rate is specified
+  if (temp_ctrl_rate < 0)
+  {
+    printf("Negative temp rate specified, preheating vehicle for 5 mins.\n");
+    temp_ctrl_pwm = 100.0 * TEMP_CTRL_NUM_THREADS;
+    usleep(5 * 60 * 1000000);
+  }
+
   return 0;
 }
 
+void temp_ctrl_run(SnavCachedData* snav_data)
+{
+  static bool initialized = false;
+  static float desired_temp;
+  static uint64_t last_update_time_us;
+  static FILE* fp = NULL;
+
+  // legacy behavior if 0 rate is specified.
+  if (temp_ctrl_rate == 0)
+  {
+    return;
+  }
+
+  if (initialized == false)
+  {
+    desired_temp = snav_data->imu_0_raw.temp;
+    last_update_time_us = get_time_us();
+    fp = fopen("/var/log/snav/calib/temp_cal.log","w");
+    initialized = true;
+  }
+  else
+  {
+    const float kf = 4.0;
+    const float kp = 200.0;
+    const float nominal_temp  = 25.0;
+
+    uint64_t delta_time_us = get_time_us() - last_update_time_us;
+    desired_temp += temp_ctrl_rate/60.0 * (delta_time_us / 1000000.0);
+    desired_temp  = fmin(desired_temp, 75.0);
+
+    float ffd_ctrl = kf * (desired_temp - nominal_temp);
+    float prp_ctrl = kp * (desired_temp - snav_data->imu_0_raw.temp);
+
+    temp_ctrl_pwm = prp_ctrl + ffd_ctrl;
+    temp_ctrl_pwm = fmin(fmax(temp_ctrl_pwm, 0), TEMP_CTRL_NUM_THREADS * 100.0);
+
+    // tag current time for next update
+    last_update_time_us = get_time_us();
+  }
+
+  // log data to file
+  if (fp != NULL)
+  {
+    fprintf(fp,
+            "%8.6f %6.2f %6.2f %8.6f %8.6f %8.6f %8.6f %8.6f %8.6f\n",
+            (float)snav_data->imu_0_raw.time / 1000000.0,
+            snav_data->imu_0_raw.temp,
+            temp_ctrl_pwm,
+            snav_data->imu_0_raw.lin_acc[0],
+            snav_data->imu_0_raw.lin_acc[1],
+            snav_data->imu_0_raw.lin_acc[2],
+            snav_data->imu_0_raw.ang_vel[0],
+            snav_data->imu_0_raw.ang_vel[1],
+            snav_data->imu_0_raw.ang_vel[2]);
+    fflush(fp);
+  }
+}
+
+void* temp_ctrl_load_cpu(void* p_idx)
+{
+  float duty_cycle;
+  int   thread_idx = *((int *)p_idx);
+  const float pwm_period_us = 1000000.0;
+
+  while (1)
+  {
+    duty_cycle = temp_ctrl_pwm - (thread_idx * 100.0);
+    duty_cycle = fmin(fmax(duty_cycle, 0), 100.0)/100.0;
+
+    uint64_t run_start = get_time_us();
+    while (get_time_us() - run_start < pwm_period_us)
+    {
+      uint64_t busy_start = get_time_us();
+
+      int i = 0;
+      while (get_time_us() - busy_start < duty_cycle * pwm_period_us)
+        ++i;
+
+      usleep((useconds_t)((1.0 - duty_cycle) * pwm_period_us));
+    }
+  }
+
+  return NULL;
+}
+
+uint64_t get_time_us()
+{
+  struct timespec time_struct;
+  clock_gettime(0,&time_struct);
+  return ((time_struct.tv_nsec)/1000 + ((uint64_t)time_struct.tv_sec)*1000000.0);
+}

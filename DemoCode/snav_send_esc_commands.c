@@ -21,9 +21,6 @@ int main(int argc, char* argv[])
 {
   int c;
   bool send_rpms = true;
-  int rpmC =2000;
-  int duration =600;
-  int count =0;
 
   while ((c = getopt(argc, argv, "rph")) != -1)
   {
@@ -43,16 +40,6 @@ int main(int argc, char* argv[])
         return -1;
     }
   }
-
-  if(argc == 2)
-   rpmC = atoi(argv[1]);
-  else if(argc >= 3)
-  {
-	rpmC = atoi(argv[1]);
-	duration = atoi(argv[2]);
-	printf("duration :,%d \n",duration);
-  }
-  printf("sending rpm:,%d \n",rpmC);
 
   SnavCachedData* snav_data = NULL;
   if (sn_get_flight_data_ptr(sizeof(SnavCachedData), &snav_data) != 0)
@@ -83,18 +70,15 @@ int main(int argc, char* argv[])
       if (send_rpms)
       {
         // Initialize RPM commands to all zeros
-        int rpms[4] = {rpmC, rpmC, rpmC, rpmC};
+        int rpms[4] = {0, 0, 0, 0};
 
         // ESC ID = cntr/100 gets 2000 RPM command
-        //rpms[cntr/100] = rpmC;
+        rpms[cntr/100] = 2000;
 
         // Send the RPM commands and request feedback from ESC ID = fb_id
-        sn_send_esc_rpm(rpms, 4, 0);
-        sn_send_esc_rpm(rpms, 4, 1);
-        sn_send_esc_rpm(rpms, 4, 2);
-        sn_send_esc_rpm(rpms, 4, 3);
-        //printf("Sending RPMs = %d %d %d %d | fb_id = %d\n",
-        //    rpms[0], rpms[1], rpms[2], rpms[3], fb_id);
+        sn_send_esc_rpm(rpms, 4, fb_id);
+        printf("Sending RPMs = %d %d %d %d | fb_id = %d\n",
+            rpms[0], rpms[1], rpms[2], rpms[3], fb_id);
       }
       else
       {
@@ -125,11 +109,6 @@ int main(int argc, char* argv[])
       if (++cntr == 400) cntr = 0;
       if (++fb_id == 4) fb_id = 0;
     }
-	count++;
-
-	if(count > duration*100 )
-		return 0;
-
     usleep(10000);
   }
 

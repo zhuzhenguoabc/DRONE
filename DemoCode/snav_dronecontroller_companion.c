@@ -84,12 +84,24 @@ int main(int argc, char* argv[])
   my_addr.sin_port = htons(port);  // short, network byte order
   memset(&(my_addr.sin_zero), '\0', 8); // zero the rest of the struct
 
+  const int kMaxNumAttempts = 10;
   printf("Using IP %s and port %d\n", ip_address, port);
-  if (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) == -1)
+  while (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) != 0)
   {
-    perror("bind");
-    exit(1);
+    static int attempt_number = 0;
+    printf("Attempt %d to bind to IP %s and port %d was unsuccessful\n", attempt_number,
+        ip_address, port);
+
+    if (attempt_number >= kMaxNumAttempts)
+    {
+      printf("Unable to bind after %d attempts.\n", attempt_number);
+      return -1;
+    }
+
+    ++attempt_number;
+    usleep(1e6);
   }
+  printf("Bound to IP %s and port %d\n", ip_address, port);
 
   addr_len = sizeof(struct sockaddr);
 
@@ -109,15 +121,6 @@ int main(int argc, char* argv[])
       perror("recvfrom");
       exit(1);
     }
-
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	double t_now = tv.tv_sec + tv.tv_usec * 1e-6;
-	static double t_start = 0;
-	if(t_start != 0)
-		t_start = t_now;
-
-	printf("last comand time: %f\n",(t_now - t_start));
 
     /**
      * Check packet header explicitly
@@ -163,8 +166,6 @@ int main(int argc, char* argv[])
       float cmd1 = -((float)(rolli+441)*(kMax-kMin)/882.+ kMin);
       float cmd2 = (float)(thrusti)*(kMax-kMin)/1000.+ kMin;
       float cmd3 = -((float)(yawi+250)*(kMax-kMin)/500.+ kMin);
-
-	  printf("\n socket rolli:pitchi:thrusti:yawi--%f,%f,%f,%f\n",cmd0,cmd1,cmd2,cmd3);
 
       // Use type to control how the commands get interpreted.
       SnRcCommandType type = SN_RC_OPTIC_FLOW_POS_HOLD_CMD;

@@ -37,68 +37,85 @@ using namespace std;
 #define DEBUG(format,...)
 #endif
 
-#define SERVER_UDP_PORT 					14559
-#define DOMAIN_PORT							16889
+#define SERVER_UDP_PORT 						14559
+#define DOMAIN_PORT								16889
 
-#define MAX_BUFF_LEN 						512
-#define MIN_GPS_POSITION_NUM 				2
-#define MAX_GPS_POSITION_NUM 				10
+#define MAX_BUFF_LEN 							512
+#define MIN_GPS_POSITION_NUM 					2
+#define MAX_GPS_POSITION_NUM 					10
 
-#define DOMAIN_BUFF_SIZE					16
+#define DOMAIN_BUFF_SIZE						16
 
-#define VERSION_NUM 						"1.0.3"
-#define STR_SEPARATOR  						","
-
-
-#define SNAV_CMD_CONROL						"1000"
-
-#define SNAV_CMD_TAKE_OFF					"1001"
-#define SNAV_CMD_LAND						"1002"
-#define SNAV_CMD_RETURN						"1003"
-#define SNAV_CMD_CIRCLE						"1004"
-#define SNAV_CMD_TRAIL_NAVIGATION			"1005"
-#define SNAV_CMD_GPS_FOLLOW					"1006"
-#define SNAV_CMD_PANORAMA					"1007"
-#define SNAV_CMD_MODIFY_SSID_PWD			"1025"
-#define SNAV_CMD_FACE_FOLLOW  				"1100"
-#define SNAV_CMD_FACE_FOLLOW_MODE  			"1110"
-#define SNAV_CMD_BODY_FOLLOW  				"1101"
+#define VERSION_NUM 							"1.0.5"
+#define STR_SEPARATOR  							","
 
 
+#define SNAV_CMD_CONROL							"1000"
 
-#define SNAV_CMD_RETURN_TAKE_OFF			"2001"
-#define SNAV_CMD_RETURN_LAND				"2002"
-#define SNAV_CMD_RETURN_RETURN				"2003"
-#define SNAV_CMD_RETURN_CIRCLE				"2004"
-#define SNAV_CMD_RETURN_TRAIL_NAVIGATION	"2005"
-#define SNAV_CMD_RETURN_GPS_FOLLOW 			"2006"
-#define SNAV_CMD_RETURN_PANORAMA			"2007"
-#define SNAV_CMD_RETURN_MODIFY_SSID_PWD 	"2025"
-#define SNAV_CMD_RETURN_FACE_FOLLOW 		"2100"
-#define SNAV_CMD_RETURN_FACE_FOLLOW_MODE  	"2110"
-#define SNAV_CMD_RETURN_BODY_FOLLOW 		"2101"
+#define SNAV_CMD_TAKE_OFF						"1001"
+#define SNAV_CMD_LAND							"1002"
+#define SNAV_CMD_RETURN							"1003"
+#define SNAV_CMD_CIRCLE							"1004"
+#define SNAV_CMD_TRAIL_NAVIGATION				"1005"
+#define SNAV_CMD_GPS_FOLLOW						"1006"
+#define SNAV_CMD_PANORAMA						"1007"
+#define SNAV_CMD_MAG_CALIBRATE					"1008"
+#define SNAV_CMD_HOR_CALIBRATE					"1009"
+#define SNAV_CMD_MODIFY_SSID_PWD				"1025"
+#define SNAV_CMD_FACE_FOLLOW  					"1100"
+#define SNAV_CMD_FACE_FOLLOW_MODE  				"1110"
+#define SNAV_CMD_BODY_FOLLOW  					"1101"
 
 
-#define SNAV_TASK_GET_INFO					"8001"
-#define SNAV_TASK_GET_VERSION				"8002"
-#define SNAV_TASK_CONFIRM_LAND				"8003"
 
-#define SNAV_TASK_GET_INFO_RESULT			"9001"
-#define SNAV_TASK_GET_VERSION_RESULT		"9002"
-#define SNAV_TASK_CONFIRM_LAND_RETURN		"9003"
+#define SNAV_CMD_RETURN_TAKE_OFF				"2001"
+#define SNAV_CMD_RETURN_LAND					"2002"
+#define SNAV_CMD_RETURN_RETURN					"2003"
+#define SNAV_CMD_RETURN_CIRCLE					"2004"
+#define SNAV_CMD_RETURN_TRAIL_NAVIGATION		"2005"
+#define SNAV_CMD_RETURN_GPS_FOLLOW 				"2006"
+#define SNAV_CMD_RETURN_PANORAMA				"2007"
+#define SNAV_CMD_RETURN_MAG_CALIBRATE			"2008"
+#define SNAV_CMD_RETURN_HOR_CALIBRATE			"2009"
+#define SNAV_CMD_RETURN_MODIFY_SSID_PWD 		"2025"
+#define SNAV_CMD_RETURN_FACE_FOLLOW 			"2100"
+#define SNAV_CMD_RETURN_FACE_FOLLOW_MODE  		"2110"
+#define SNAV_CMD_RETURN_BODY_FOLLOW 			"2101"
+
+
+#define SNAV_TASK_GET_INFO						"8001"
+#define SNAV_TASK_GET_SNAV_PROXY_VERSION		"8002"
+#define SNAV_TASK_CONFIRM_LAND					"8003"
+#define SNAV_TASK_SNAV_UPDATE					"8008"
+#define SNAV_TASK_LINARO_UPDATE					"8009"
+#define SNAV_TASK_GET_LINARO_VERSION			"8010"
+#define SNAV_TASK_GET_SNAV_VERSION				"8011"
+#define SNAV_TASK_GET_QCAM_VERSION				"8012"
+#define SNAV_TASK_GET_STORAGE					"8013"
+
+#define SNAV_TASK_GET_INFO_RETURN				"9001"
+#define SNAV_TASK_GET_SNAV_PROXY_VERSION_RETURN	"9002"
+#define SNAV_TASK_CONFIRM_LAND_RETURN			"9003"
+#define SNAV_TASK_SNAV_UPDATE_RETURN			"9008"
+#define SNAV_TASK_LINARO_UPDATE_RETURN			"9009"
+#define SNAV_TASK_GET_LINARO_VERSION_RETURN		"9010"
+#define SNAV_TASK_GET_SNAV_VERSION_RETURN		"9011"
+#define SNAV_TASK_GET_QCAM_VERSION_RETURN		"9012"
+#define SNAV_TASK_GET_STORAGE_RETURN			"9013"
 
 
 //send to client
-#define SNAV_TASK_SHOW_LAND_CONFIRM			"8004"
-#define SNAV_TASK_NEED_PANORAMA_SNAPSHOT	"8005"
-
-#define SNAV_TASK_SHOW_LAND_CONFIRM_RETURN	"9004"
-#define SNAV_TASK_PANORAMA_SNAPSHOT_RETURN	"9005"
+#define SNAV_TASK_SHOW_LAND_CONFIRM				"8004"
+#define SNAV_TASK_NEED_PANORAMA_SNAPSHOT		"8005"
 
 
-#define SNAV_INFO_OPTIC_FLOW_MISS_SAMPLE	"9100"
-#define SNAV_INFO_OVER_SAFE_HEIGHT			"9101"
+#define SNAV_INFO_OPTIC_FLOW_MISS_SAMPLE		"9100"
+#define SNAV_INFO_OVER_SAFE_HEIGHT				"9101"
+#define SNAV_INFO_SNAV_NEED_UPDATE				"9102"
+#define SNAV_INFO_APP_NEED_UPDATE				"9103"
 
+#define SNAV_INFO_MAG_CALIBRATE_RESULT			"9110"
+#define SNAV_INFO_HOR_CALIBRATE_RESULT			"9111"
 
 
 typedef unsigned char byte;
@@ -132,6 +149,17 @@ enum class DroneState
   MODE_ERROR
 };
 
+// LED COLOR
+enum class LedColor
+{
+  UNKNOWN,
+  LED_COLOR_RED,
+  LED_COLOR_GREEN,
+  LED_COLOR_BLUE,
+  LED_COLOR_WHITE
+};
+
+
 struct Position
 {
   float x;   // m
@@ -162,18 +190,25 @@ struct body_info
   int  body_flag; //1000 upperbody 1001 fullbody
   bool newP;
   float distance;   // m
+  float velocity;   // m/s
   float hegith_calib;   // m for height need to changed to center
   float angle;   // m
 };
+
+static LedColor led_color_status = LedColor::UNKNOWN;
+static bool bNeedLedColorCtl = false;
 
 struct body_info cur_body;
 static bool face_follow_switch = false;
 static bool body_follow_switch = false;
 static bool face_rotate_switch = false; // false: drone will parallel;   true:drone will first rotate to face then close
 const float safe_distance = 1.6f;
-const float min_angle_offset = 0.08f;
+const float min_angle_offset = 0.087f;// about 5
 const float safe_distanceB = 2.5f; //body distance
-static bool adjust_people_height = false;
+static bool adjust_people_height = true;
+const float face_height_limit = 2.2f;
+const float face_vel_limit = 1.0f;	 //m/sec
+const float body_speed_limit = 2.78f; //m/s  10km/h   2.78*2.5 25km/h
 //cuiyc  face detect
 
 
@@ -209,6 +244,7 @@ struct prodcons pro_udp_receive;
 struct timeval timeout_udp = {0,300000};			//300ms
 
 
+// *****************tool functions start******************************
 vector<string> split(const string& s, const string& delim)
 {
     vector<string> elems;
@@ -283,6 +319,9 @@ int bytesToInt(byte src[], int offset)
 
     return value;
 }
+// *****************tool functions end******************************
+
+
 
 //cyc people detect begin
 void* getVideoFaceFollowParam(void*)
@@ -292,11 +331,11 @@ void* getVideoFaceFollowParam(void*)
 	static int recv_php_buf[16];
 	static int recv_php_num=0;
 
-	const float window_degree = 72.7768f;
+	const float window_degree = 101.9747f; //117  degree   101;  83 degree 72
 	const float camera_rad =window_degree*M_PI/180; //camera 83.5 degree
 	const float camera_vert_rad =(9.0f/16)*window_degree*M_PI/180; //camera 83.5 degree
 	const float face_winth =0.150; //camera 83.5 degree
-	const float angle_camera =25*M_PI/180;//angle of inclination for camera
+	const float angle_camera =0;//25*M_PI/180;//angle of inclination for y , 0 or 25
 	int listen_fd;
 	int ret=0;
 	int i;
@@ -305,7 +344,7 @@ void* getVideoFaceFollowParam(void*)
 	struct sockaddr_un srv_addr;
  	socklen_t len =sizeof(clt_addr);
 
-	DEBUG("getVideoFaceFollowParam start");
+	DEBUG("getVideoFaceFollowParam start\n");
 
 	while(1)
 	{
@@ -365,7 +404,7 @@ void* getVideoFaceFollowParam(void*)
 						}
 						//face y center ,height need add to calibration to 1/3 height for image
 						vert_offset_angle = angle_camera -
-							camera_vert_rad*(recv_php_buf[6]/3 -recv_php_buf[2])/recv_php_buf[6];
+							camera_vert_rad*(recv_php_buf[6]/2 -recv_php_buf[2])/recv_php_buf[6];
 
 						height_cal =distance*tan(angle_camera) - distance * tan(vert_offset_angle);
 
@@ -411,11 +450,6 @@ void* getVideoBodyFollowParam(void*)
 	static int recv_php_buf[16];
 	static int recv_php_num=0;
 
-	const float window_degree = 72.7768f;
-	const float camera_rad =window_degree*M_PI/180; //camera 83.5 degree
-	const float upper_body_winth =0.70; //camera 83.5 degree
-	const float body_winth =1.0; //camera 83.5 degree
-
 	int listen_fd;
 	int ret=0;
 	int i;
@@ -439,7 +473,7 @@ void* getVideoBodyFollowParam(void*)
 			  {
 			   srv_addr.sun_family=AF_UNIX;
 			   strncpy(srv_addr.sun_path,UNIX_DOMAIN,sizeof(srv_addr.sun_path)-1);
-
+			   unlink(UNIX_DOMAIN);
 			   ret=bind(listen_fd,(struct sockaddr*)&srv_addr,sizeof(srv_addr));
 			   if(ret==-1)
 			   {
@@ -453,40 +487,18 @@ void* getVideoBodyFollowParam(void*)
 				recv_php_num = recvfrom(listen_fd, recv_php_buf, sizeof(recv_php_buf),
 					0, (struct sockaddr *)&clt_addr, &len);
 				DEBUG("\n=====body info===== ");
-				for(i=0;i<16;i++) //0,flag 1,center-x 2,center-y,3,body_winth,4,body_height,5,body flag 1000=halfbody 1001=fullbody
+				for(i=0;i<16;i++) //0,flag 1,center-x 2,center-y,3,velocity forward,4,angle,5,video_winth,6,video_height
 				DEBUG("%d ",recv_php_buf[i]);
 				DEBUG("\n");
 
-				if(recv_php_buf[0] == 1 && !cur_body.have_face)
+				if(recv_php_buf[0] == 1 && body_follow_switch)
 				{
 					// normal  face 18cm && camera 83.5 degree
-					float distance,angle;
+					float velocity_add,angle;
 					cur_body.have_body=true;
-
-					if(recv_php_buf[5] == 1000) //upperbody
-					{
-						distance = upper_body_winth/tan((recv_php_buf[3]*camera_rad/640));
-						cur_body.body_flag =1000;
-					}
-					else if(recv_php_buf[5] == 1001) //pedestrian
-					{
-						distance = body_winth/tan((recv_php_buf[3]*camera_rad/640));
-						cur_body.body_flag =1001;
-					}
-
-					//dgree for window 72.7768
-					angle = window_degree*((640/2 - recv_php_buf[1])*1.0)/640;
-					DEBUG("body distance :%f angle:%f \n",distance,angle);
-
-					if((cur_body.angle != angle) || (cur_body.distance != distance))
-					{
-						cur_body.distance = distance;
-						cur_body.angle 	= angle;
-						cur_body.newP = true;
-					}
-					else
-						cur_body.newP = false;
-
+					cur_body.velocity= recv_php_buf[3]*0.01f; //cm/s to m/s
+					cur_body.angle = recv_php_buf[4];
+					DEBUG("@@@@ velocity:%f angle:%f",cur_body.velocity,cur_body.angle);
 				}
 				else //if we have face ,set no body
 					cur_body.have_body=false;
@@ -504,7 +516,7 @@ void* getVideoBodyFollowParam(void*)
 /*******************communicate with qcamvid************************************/
 void* communicateWithQcamvid(void*)
 {
-	DEBUG("communicateWithQcamvid start");
+	DEBUG("communicateWithQcamvid start\n");
 
 	int socket_cli;
 
@@ -521,21 +533,21 @@ void* communicateWithQcamvid(void*)
 	{
 		if (send_panorama_flag)
 		{
-			send_num = sendto(socket_cli, panorama_buff, DOMAIN_BUFF_SIZE, 0, (struct sockaddr*)&address, sizeof(address));
+			send_num = sendto(socket_cli, panorama_buff, strlen(panorama_buff), 0, (struct sockaddr*)&address, sizeof(address));
 			DEBUG("panorama_buff=%s send_num=%d\n", panorama_buff,send_num);
 			send_panorama_flag = false;
 		}
 
 		if (send_face_follow_swither_flag)
 		{
-			send_num = sendto(socket_cli, face_follow_swither_buff, DOMAIN_BUFF_SIZE, 0, (struct sockaddr*)&address, sizeof(address));
+			send_num = sendto(socket_cli, face_follow_swither_buff, strlen(face_follow_swither_buff), 0, (struct sockaddr*)&address, sizeof(address));
 			DEBUG("face_follow_swither_buff=%s send_num=%d\n", face_follow_swither_buff,send_num);
 			send_face_follow_swither_flag = false;
 		}
 
 		if (send_body_follow_swither_flag)
 		{
-			send_num = sendto(socket_cli, body_follow_swither_buff, DOMAIN_BUFF_SIZE, 0, (struct sockaddr*)&address, sizeof(address));
+			send_num = sendto(socket_cli, body_follow_swither_buff, strlen(body_follow_swither_buff), 0, (struct sockaddr*)&address, sizeof(address));
 			DEBUG("body_follow_swither_buff=%s send_num=%d\n", body_follow_swither_buff,send_num);
 			send_body_follow_swither_flag = false;
 		}
@@ -544,11 +556,127 @@ void* communicateWithQcamvid(void*)
 }
 
 
+
+/*******************led control************************************/
+void* ledControl(void*)
+{
+	DEBUG("ledControl thread start\n");
+
+	uint8_t led_colors[3] = {0,0,0};  //R, G, B
+	int32_t timeout = 1000000; //timeout for flight controller to take over LED control after API commands stop
+
+
+	int continue_red_count = 0;
+	int continue_green_count = 0;
+	int continue_blue_count = 0;
+	int continue_white_count = 0;
+
+	SnavCachedData* snav_data = NULL;
+	if (sn_get_flight_data_ptr(sizeof(SnavCachedData), &snav_data) != 0)
+	{
+		DEBUG("Failed to get flight data pointer in ledControl!\n");
+		return 0;
+	}
+
+	while (true)
+	{
+		int update_ret = sn_update_data();  //need to do this at least once to make sure that SNAV is running
+
+		if (update_ret != 0)
+		{
+			DEBUG("sn_update_data failed in ledControl!\n");
+			continue;
+		}
+
+		switch(led_color_status)
+		{
+			case LedColor::LED_COLOR_RED:
+			{
+				continue_red_count++;
+				continue_green_count=0;
+				continue_blue_count=0;
+				continue_white_count=0;
+
+				led_colors[0] = 0;//255;
+				led_colors[1] = 255;//0;
+				led_colors[2] = 0;
+
+				break;
+			}
+			case LedColor::LED_COLOR_GREEN:
+			{
+				continue_red_count=0;
+				continue_green_count++;
+				continue_blue_count=0;
+				continue_white_count=0;
+
+				led_colors[0] = 255;//0;
+				led_colors[1] = 0;//255;
+				led_colors[2] = 0;
+
+				break;
+			}
+			case LedColor::LED_COLOR_BLUE:
+			{
+				continue_red_count=0;
+				continue_green_count=0;
+				continue_blue_count++;
+				continue_white_count=0;
+
+				led_colors[0] = 0;
+				led_colors[1] = 0;
+				led_colors[2] = 255;
+
+				break;
+			}
+			case LedColor::LED_COLOR_WHITE:
+			{
+				continue_red_count=0;
+				continue_green_count=0;
+				continue_blue_count=0;
+				continue_white_count++;
+
+				led_colors[0] = 255;
+				led_colors[1] = 255;
+				led_colors[2] = 255;
+
+				break;
+			}
+			default:
+			{
+				break;
+			}
+		}
+
+		// for red/blue color twinkle with black color
+		if (((continue_red_count%100 >= 50) && (continue_red_count%100 < 100))
+			|| ((continue_blue_count%100 >= 50) && (continue_blue_count%100 < 100)))
+		{
+			led_colors[0] = 0;
+			led_colors[1] = 0;
+			led_colors[2] = 0;
+		}
+
+		DEBUG("sn_set_led_colors bNeedLedColorCtl:%d,led_color_status:%d, Color:%d,%d,%d\n",bNeedLedColorCtl,led_color_status,led_colors[0],led_colors[1],led_colors[2]);
+
+		if (bNeedLedColorCtl)
+		{
+			int ret = sn_set_led_colors(led_colors, sizeof(led_colors), timeout);
+
+			if (ret != 0)
+			{
+			  DEBUG("sn_set_led_colors returned %d\n",ret);
+			}
+		}
+
+		usleep(10000);  //note that commands should only be sent as often as needed (minimize message traffic)
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	/*
 	//only keep 5 log files
-	//system("find /home/linaro/dev/examples/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +5|awk '{print $9}'| xargs rm -rf");
 	system("find /home/linaro/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +5|awk '{print $9}'| xargs rm -rf");
 
 	time_t now;
@@ -557,32 +685,26 @@ int main(int argc, char* argv[])
 	curTime = localtime(&now);
 
 	char log_filename[256];
-
-
-	sprintf(log_filename,"/home/linaro/dev/examples/log_snav_%04d-%02d-%02d-%02d-%02d-%02d",
-							curTime->tm_year+1900,curTime->tm_mon+1,curTime->tm_mday,
-							curTime->tm_hour,curTime->tm_min,curTime->tm_sec);
-
 	sprintf(log_filename,"/home/linaro/log_snav_%04d-%02d-%02d-%02d-%02d-%02d",
 							curTime->tm_year+1900,curTime->tm_mon+1,curTime->tm_mday,
 							curTime->tm_hour,curTime->tm_min,curTime->tm_sec);
 	*/
 
-
 	//confirm logfile name start
-	FILE *fp_count_read;
-	FILE *fp_count_write;
+	FILE *fp_count_read, *fp_count_write;
 	int log_count=0;
 
 	if ((fp_count_read = fopen("/home/linaro/snav_proxy_count", "a+")) != NULL)
 	{
-		char str[2];
-
 		if (fscanf(fp_count_read, "%d", &log_count) != EOF)
 		{
 			DEBUG("snav_proxy_count=%d\n", log_count);
 			if (log_count>=0)
 			{
+				if (log_count>=8000)
+				{
+					log_count=0;
+				}
 				log_count++;
 			}
 		}
@@ -593,6 +715,7 @@ int main(int argc, char* argv[])
 		}
 		fclose(fp_count_read);
 
+		char str[16];
 		if ((fp_count_write = fopen("/home/linaro/snav_proxy_count", "w+")) != NULL)
 		{
 			sprintf(str, "%d", log_count);
@@ -601,16 +724,12 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	//only keep 5 log files
+	//only keep the last 5 log files
 	system("find /home/linaro/ -type f -name 'log_snav*'|xargs -r ls -l|head -n -5|awk '{print $9}'| xargs rm -rf");
-
 	char log_filename[256];
-
  	sprintf(log_filename,"/home/linaro/log_snav_%04d", log_count);
-
 	DEBUG("log_filename=%s\n", log_filename);
 	//confirm logfile name end
-
 
 
 	FILE *fp;
@@ -626,14 +745,14 @@ int main(int argc, char* argv[])
 	bool face_body_follow_flag = false;
 	while(!face_body_follow_flag)
 	{
-		pthread_t face_body_follow_thread;
+		pthread_t face_body_follow_thread,body_follow_thread;
 	    pthread_attr_t thread_attr;
 	    int result;
 
 	    result = pthread_attr_init(&thread_attr);
 	    if(result !=0)
 	    {
-	        perror(" face_body_follow_thread Attribute creation failed");
+	        perror(" face_body_follow_thread Attribute init failed");
 	        continue;
 	    }
 
@@ -645,13 +764,19 @@ int main(int argc, char* argv[])
 	        continue;
 	    }
 
-		DEBUG("create face_body_follow thread\n");
-
 		result = pthread_create(&face_body_follow_thread,&thread_attr,getVideoFaceFollowParam, NULL);
-		//result = pthread_create(&face_body_follow_thread,&thread_attr,getVideoBodyFollowParam, NULL);
+		if(result !=0)
+	    {
+	    	perror("Thread face_body_follow create failed");
+	    	pthread_attr_destroy(&thread_attr);
+	        continue;
+	    }
+
+		result = pthread_create(&body_follow_thread,&thread_attr,getVideoBodyFollowParam, NULL);
 	    if(result !=0)
 	    {
-	    	perror("Thread face_body_follow creation failed");
+	    	pthread_cancel(face_body_follow_thread);
+	    	perror("Thread face_body_follow create failed");
 	    	pthread_attr_destroy(&thread_attr);
 	        continue;
 	    }
@@ -664,47 +789,91 @@ int main(int argc, char* argv[])
 	}
 
 	//create the communication with qcamvid process
-	bool communication_with_qcamvid_flag = false;
-	while(!communication_with_qcamvid_flag)
+	bool communicate_with_qcamvid_flag = false;
+	while(!communicate_with_qcamvid_flag)
 	{
-		pthread_t communication_with_qcamvid_thread;
+		pthread_t communicate_with_qcamvid_thread;
 	    pthread_attr_t thread_attr;
 	    int result;
 
 	    result = pthread_attr_init(&thread_attr);
 	    if(result !=0)
 	    {
-	        perror("communication_with_qcamvid_thread Attribute creation failed");
+	        perror("communication_with_qcamvid_thread Attribute init failed");
 	        continue;
 	    }
 
 	    result = pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);
 	    if(result !=0)
 	    {
-	        perror("communication_with_qcamvid_thread Setting detached attribute failed");
+	        perror("communicate_with_qcamvid_thread Setting detached attribute failed");
 	        pthread_attr_destroy(&thread_attr);
 	        continue;
 	    }
 
-		DEBUG("create communication_with_qcamvid thread\n");
-
-		result = pthread_create(&communication_with_qcamvid_thread,&thread_attr,communicateWithQcamvid, NULL);
+		result = pthread_create(&communicate_with_qcamvid_thread,&thread_attr,communicateWithQcamvid, NULL);
 	    if(result !=0)
 	    {
-	    	perror("Thread communication_with_qcamvid_thread creation failed");
+	    	perror("Thread communication_with_qcamvid_thread create failed");
 	    	pthread_attr_destroy(&thread_attr);
 	        continue;
 	    }
 		else
 		{
-			communication_with_qcamvid_flag = true;
+			communicate_with_qcamvid_flag = true;
 		}
 
 		pthread_attr_destroy(&thread_attr);
 	}
 
-	float speed_coefficient = 1.0f;	//0.5f;
-	float height_limit = 30.0f;	//m
+	//create the led control process
+	bool led_ctl_flag = false;
+	while(!led_ctl_flag)
+	{
+		pthread_t led_ctl_thread;
+	    pthread_attr_t thread_attr;
+	    int result;
+
+	    result = pthread_attr_init(&thread_attr);
+	    if(result !=0)
+	    {
+	        perror("led_ctl_thread Attribute init failed");
+	        continue;
+	    }
+
+	    result = pthread_attr_setdetachstate(&thread_attr,PTHREAD_CREATE_DETACHED);
+	    if(result !=0)
+	    {
+	        perror("led_ctl_thread Setting detached attribute failed");
+	        pthread_attr_destroy(&thread_attr);
+	        continue;
+	    }
+
+		result = pthread_create(&led_ctl_thread,&thread_attr,ledControl, NULL);
+	    if(result !=0)
+	    {
+	    	perror("Thread led_ctl_thread create failed");
+	    	pthread_attr_destroy(&thread_attr);
+	        continue;
+	    }
+		else
+		{
+			led_ctl_flag = true;
+		}
+
+		pthread_attr_destroy(&thread_attr);
+	}
+
+	// *******for pull back when flying and stop with high roll/pitch speed then stop make the drone drop!****
+	float last_valid_roll = 0;
+	double last_valid_roll_time = 0;
+	float last_valid_pitch = 0;
+	double last_valid_pitch_time = 0;
+	// *******for pull back when flying and stop with high roll/pitch speed then stop make the drone drop!****
+
+	int optic_flow_error_stop_flag = 1;
+	float speed_coefficient = 0.5f;	//limit the speed when the height grow
+	float height_limit = 20.0f;	//30.0f;	//m
 	float distance_limit = 60.0f;	//m
 	float distance_in_xy = 0;
 
@@ -714,12 +883,12 @@ int main(int argc, char* argv[])
 
 	char udp_receive_data[MAX_BUFF_LEN];
 	char result_to_client[MAX_BUFF_LEN];
-	bool bLocalUdpFlag = false;
+	bool bReceivedUdpMsg = false;
 
 	char drone_state_error[MAX_BUFF_LEN];
 
 	int	 udpOverTimeCount = 0;
-	bool bHaveUdpFlag = false;
+	bool bHaveUdpClient = false;
 	char current_udp_client_addr[MAX_BUFF_LEN];
 
 	// Desired takeoff altitude
@@ -748,7 +917,8 @@ int main(int argc, char* argv[])
 	float gohome_y_vel_des = 0;
 	float gohome_z_vel_des = 0;
 	float gohome_yaw_vel_des = 0;
-	bool wp_goal=false;
+	uint8_t wp_goal_ret = 0b11111111;
+  	uint8_t wp_goal_mask = 0b11111111;
 	float yaw_target_home, distance_home_squared;
 	float distance_home_squared_threshold = 1;
 	FlatVars output_vel;
@@ -801,8 +971,6 @@ int main(int argc, char* argv[])
 	MissionState state = MissionState::ON_GROUND;	//UNKNOWN;
 	int loop_counter = 0;
 
-	static bool task_take_off_in_progress = true;
-
 	SnavCachedData* snav_data = NULL;
 	if (sn_get_flight_data_ptr(sizeof(SnavCachedData), &snav_data) != 0)
 	{
@@ -810,7 +978,62 @@ int main(int argc, char* argv[])
 		return NULL;
 	}
 
-	//udp for cmd
+	/*
+	//check if need force update
+	bool need_force_update_snav = false;
+	bool need_force_update_snav_proxy = false;
+
+	FILE *version_fp;
+	char expected_version[3][64] = {0,0,0};
+
+	if ((version_fp = fopen("/etc/systeminfo.cfg", "r")) != NULL)
+	{
+		int i=0;
+
+		while(fgets(expected_version[i],sizeof(expected_version[i]),version_fp)!=NULL)
+		{
+			DEBUG("Expected version:%s\n",expected_version[i++]);
+			if (expected_version[i][strlen(expected_version[i])-1] == '\n')
+			{
+				expected_version[i][strlen(expected_version[i])-1] = '\0';
+			}
+		}
+
+		fclose(version_fp);
+	}
+
+	//check current version	print $2,$3
+	char get_version_cmd[3][128] = {"dpkg -l mm-video | tail -n 1 | awk '{print $3}'",
+									"dpkg -l snav-dev | tail -n 1 | awk '{print $3}'",
+									"dpkg -l snav-control-proxy-udp | tail -n 1 | awk '{print $3}'"};
+	char current_version[3][64] = {0,0,0};
+
+  	for (int i=0; i<3; i++)
+  	{
+		FILE *fp = popen(get_version_cmd[i], "r");
+        fgets(current_version[i], sizeof(current_version[i]), fp);
+        DEBUG("Current version[%d]:%s", i,current_version[i]);
+
+        if (current_version[i][strlen(current_version[i])-1] == '\n')
+		{
+			current_version[i][strlen(current_version[i])-1] = '\0';
+		}
+        pclose(fp);
+	}
+
+	if (strcmp(current_version[1], expected_version[1]) != 0)
+	{
+		need_force_update_snav = true;
+	}
+
+	if (strcmp(current_version[2], expected_version[2]) != 0)
+	{
+		need_force_update_snav_proxy = true;
+	}
+	*/
+
+
+	//udp
 	int server_udp_sockfd;
 	int server_udp_len;
     struct sockaddr_in server_udp_address;
@@ -824,6 +1047,7 @@ int main(int argc, char* argv[])
 
     int bind_result = bind(server_udp_sockfd,(struct sockaddr*)&server_udp_address,server_udp_len);
 
+	//300MS avoid of udp missing data
 	setsockopt(server_udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout_udp, sizeof(struct timeval));
 	setsockopt(server_udp_sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout_udp, sizeof(struct timeval));
 
@@ -831,11 +1055,8 @@ int main(int argc, char* argv[])
 	{
 		int length = 0;
 		struct sockaddr_in remote_addr;
-		int sin_size;
-	    char udp_buff_data[MAX_BUFF_LEN];
-		char last_udp_buff_data[MAX_BUFF_LEN];
-
-		sin_size=sizeof(struct sockaddr_in);
+		int sin_size=sizeof(struct sockaddr_in);
+		char udp_buff_data[MAX_BUFF_LEN];
 
 		//receive the udp data
 		length=recvfrom(server_udp_sockfd,udp_buff_data,MAX_BUFF_LEN-1,0, (struct sockaddr *)&remote_addr,(socklen_t*)&sin_size);
@@ -846,16 +1067,16 @@ int main(int argc, char* argv[])
 			gettimeofday(&time_val, NULL);
 			double time_now = time_val.tv_sec + time_val.tv_usec * 1e-6;
 
-			DEBUG("\nudp recvfrom received packet from %s,%d:\n",inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
+			DEBUG("\nudp recvfrom received data from %s,%d:\n",inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
 			udp_buff_data[length]='\0';
 			DEBUG("udp recvfrom get data udp_buff_data=%s, time_now=%lf\n",udp_buff_data, time_now);
 
-			bLocalUdpFlag = true;
+			bReceivedUdpMsg = true;
 
-			//************************************************************
+			//********************ignore the other udp connec******************************
 			udpOverTimeCount = 0;
 
-			if (bHaveUdpFlag)
+			if (bHaveUdpClient)
 			{
 				DEBUG("udp recvfrom current client addr=%s\n",current_udp_client_addr);
 
@@ -869,7 +1090,7 @@ int main(int argc, char* argv[])
 			//lock the udp ip when the first udp send something
 			else
 			{
-				bHaveUdpFlag = true;
+				bHaveUdpClient = true;
 
 				memset(current_udp_client_addr,0,MAX_BUFF_LEN);
 				memcpy(current_udp_client_addr, inet_ntoa(remote_addr.sin_addr), MAX_BUFF_LEN);
@@ -884,7 +1105,7 @@ int main(int argc, char* argv[])
 
 			DEBUG("\nudp recvfrom return length=%d, errno=%d, time_now=%lf\n", length, errno, time_now);
 
-			bLocalUdpFlag = false;
+			bReceivedUdpMsg = false;
 
 			//************************************************************
 			udpOverTimeCount++;
@@ -894,9 +1115,27 @@ int main(int argc, char* argv[])
 			if (udpOverTimeCount >= 10)		//10*300ms
 			{
 				DEBUG("udp recvfrom the first client overtime and discard\n");
-				bHaveUdpFlag = false;
+				bHaveUdpClient = false;
 			}
 		}
+
+		//check if need force update
+		/*
+		if (need_force_update_snav)
+		{
+			memset(result_to_client,0,MAX_BUFF_LEN);
+			memcpy(result_to_client, SNAV_INFO_SNAV_NEED_UPDATE, MAX_BUFF_LEN);
+			length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+			continue;
+		}
+		else if (need_force_update_snav_proxy)
+		{
+			memset(result_to_client,0,MAX_BUFF_LEN);
+			memcpy(result_to_client, SNAV_INFO_APP_NEED_UPDATE, MAX_BUFF_LEN);
+			length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+			continue;
+		}
+		*/
 
 		//for limit optic flow get none smaple_size
 		struct timeval tv_for_record_optic_flow;
@@ -1043,6 +1282,48 @@ int main(int argc, char* argv[])
 			DEBUG("drone_state_error=%s\n",drone_state_error);
 			//check end
 
+			if (mode != SN_OPTIC_FLOW_POS_HOLD_MODE
+				|| drone_state == DroneState::IMU_ERROR
+				|| drone_state == DroneState::OPTIC_FLOW_ERROR
+				|| drone_state == DroneState::SONAR_ERROR
+				|| drone_state == DroneState::BARO_ERROR
+				|| drone_state == DroneState::GPS_ERROR
+				|| drone_state == DroneState::MAG_ERROR
+				|| drone_state == DroneState::MOTOR_ERROR
+				|| drone_state == DroneState::CPU_OVER_HEAT)
+			{
+				led_color_status = LedColor::LED_COLOR_RED;
+				bNeedLedColorCtl = true;
+			}
+			else if ((on_ground_flag == 1 && snav_data->general_status.voltage<7.40f)
+					|| (snav_data->general_status.voltage<6.90f))	/*7.22~6.72*/
+			{
+				led_color_status = LedColor::LED_COLOR_BLUE;
+				bNeedLedColorCtl = true;
+			}
+			else if (cur_body.have_face && face_follow_switch)
+			{
+				led_color_status = LedColor::LED_COLOR_GREEN;
+				bNeedLedColorCtl = true;
+			}
+			else if (bHaveUdpClient)
+			{
+				if (on_ground_flag == 1)
+				{
+					led_color_status = LedColor::LED_COLOR_GREEN;
+				}
+				else
+				{
+					led_color_status = LedColor::LED_COLOR_WHITE;
+				}
+				bNeedLedColorCtl = true;
+			}
+			else
+			{
+				bNeedLedColorCtl = false;
+			}
+
+			DEBUG("bNeedLedColorCtl:%d,led_color_status:%d\n",bNeedLedColorCtl,led_color_status);
 
 			//for limit optic flow get none smaple_size
 			if (snav_data->optic_flow_0_raw.sample_size>0)
@@ -1053,7 +1334,7 @@ int main(int argc, char* argv[])
 			string recv_udp_cmd;
 			vector<string> gpsparams_udp;
 
-			if (bLocalUdpFlag)
+			if (bReceivedUdpMsg)
 			{
 				recv_udp_cmd = udp_buff_data;	//udp_receive_data;
 				gpsparams_udp = split(recv_udp_cmd,STR_SEPARATOR);
@@ -1166,7 +1447,9 @@ int main(int argc, char* argv[])
 							}
 
 							//for limit optic flow get none smaple_size
-							if (t_optic_flow_now - t_optic_flow_start > 2)
+							if ((t_optic_flow_now - t_optic_flow_start > 2)
+								&& (state == MissionState::TRAJECTORY_FOLLOW
+									|| state == MissionState::LOITER))
 							{
 								cmd0 = 0;
 								cmd1 = 0;
@@ -1177,6 +1460,11 @@ int main(int argc, char* argv[])
 								memset(result_to_client,0,MAX_BUFF_LEN);
 								memcpy(result_to_client, SNAV_INFO_OPTIC_FLOW_MISS_SAMPLE, MAX_BUFF_LEN);
 								length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+
+								if (optic_flow_error_stop_flag == 1)
+								{
+									system("stop snav");
+								}
 							}
 
 							//limit the height
@@ -1213,11 +1501,94 @@ int main(int argc, char* argv[])
 							body_mission=false;
 
 							state = MissionState::LOITER;
+
+							struct timeval t_val;
+							gettimeofday(&t_val, NULL);
+							double time_for_check = t_val.tv_sec + t_val.tv_usec * 1e-6;
+
+							last_valid_roll = cmd1;
+							last_valid_roll_time = time_for_check;
+							last_valid_pitch = cmd0;
+							last_valid_pitch_time = time_for_check;
+
+							//DEBUG("[%d]:last_valid pitch,roll,time=%f,%f,%lf\n",loop_counter,cmd0,cmd1,time_for_check);
 						}
 
 						loop_counter++;
 						continue;
 					}
+					/*
+					else	//1000, 0, 0, 0, 500, 0 loiter data
+					{
+						struct timeval t_val;
+						gettimeofday(&t_val, NULL);
+						double time_now = t_val.tv_sec + t_val.tv_usec * 1e-6;
+						double time_diff = time_now-last_valid_roll_time;
+						float max_time_gap = 1.0f;	//1s
+						float index = (max_time_gap-time_diff)/max_time_gap;
+
+						DEBUG("[%d]:Revise last_valid_roll,last_valid_pitch,time-diff:%f,%f,%lf\n",loop_counter,last_valid_roll,last_valid_pitch,time_diff);
+
+						if (((fabs(last_valid_roll)>0.3f) || (fabs(last_valid_pitch)>0.3f))
+								&& (time_diff<max_time_gap))
+						{
+							float cmd0 = 0;
+							float cmd1 = 0;
+							float cmd2 = 0;
+							float cmd3 = 0;
+
+							DEBUG("[%d]:Revise index:%f\n",loop_counter,index);
+
+							if (fabs(last_valid_pitch)>0.3f)
+							{
+								cmd0 = -last_valid_pitch*0.3f;	//*index;
+							}
+
+							if (fabs(last_valid_roll)>0.3f)
+							{
+								cmd1 = -last_valid_roll*0.3f;	//*index;
+							}
+
+
+							// Use type to control how the commands get interpreted.
+				      		SnRcCommandType type = SN_RC_OPTIC_FLOW_POS_HOLD_CMD;
+
+							if (props_state == SN_PROPS_STATE_SPINNING)
+							{
+								DEBUG("#####################################################\n");
+								DEBUG("UDP SNAV_SEND_REVISE_CMD cmd0,cmd1,cmd2,cmd3:%f,%f,%f,%f\n",
+												cmd0,cmd1,cmd2,cmd3);
+								DEBUG("#####################################################\n\n");
+
+
+								// Send the commands to Snapdragon Navigator with default RC options
+				        		sn_send_rc_command(type, RC_OPT_DEFAULT_RC, cmd0, cmd1, cmd2, cmd3);
+
+								//change the state when get udp control
+								current_position =0;
+
+								circle_mission = false;
+								calcCirclePoint = false;
+
+								panorama_mission = false;
+								calcPanoramaPoint = false;
+
+								trail_navigation_mission = false;
+
+								return_mission = false;
+
+								//people detect cuiyc begin
+								face_mission=false;
+								body_mission=false;
+
+								state = MissionState::LOITER;
+							}
+
+							loop_counter++;
+							continue;
+						}
+					}
+					*/
 				}
 				//task
 				else if (gpsparams_udp.size() >= 2 && (gpsparams_udp[0].compare(SNAV_TASK_GET_INFO)==0))
@@ -1232,7 +1603,7 @@ int main(int argc, char* argv[])
 
 					memset(result_to_client,0,MAX_BUFF_LEN);
 
-					sprintf(result_to_client,"%s",SNAV_TASK_GET_INFO_RESULT);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_INFO_RETURN);
 
 					char battery_info[MAX_BUFF_LEN];
 					char rpm_info[MAX_BUFF_LEN];
@@ -1328,29 +1699,167 @@ int main(int argc, char* argv[])
 					//strcat(result_to_client, STR_SEPARATOR);
 					//strcat(result_to_client, drone_state_error);
 
-					DEBUG("rpy_info=%s\n",result_to_client);
+					DEBUG("result_to_client=%s\n",result_to_client);
 
 					//sendback the udp data
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 
-					DEBUG("udp sendto SNAV_TASK_GET_INFO_RESULT length=%d\n",length);
+					DEBUG("udp sendto SNAV_TASK_GET_INFO_RETURN length=%d\n",length);
 
 					continue;
 					//memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
 				}
-				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_GET_VERSION) == 0))
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_GET_SNAV_PROXY_VERSION) == 0))
 				{
-					sprintf(result_to_client,"%s",SNAV_TASK_GET_VERSION_RESULT);
+					memset(result_to_client,0,MAX_BUFF_LEN);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_SNAV_PROXY_VERSION_RETURN);
 
 					strcat(result_to_client, STR_SEPARATOR);
 					strcat(result_to_client, VERSION_NUM);
 
-					//memcpy(pro_tcp_send.data, result_to_client, MAX_BUFF_LEN);
+					DEBUG("udp sendto SNAV_TASK_GET_SNAV_PROXY_VERSION_RETURN result_to_client=%s\n",result_to_client);
 
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
-					DEBUG("udp sendto SNAV_TASK_GET_VERSION_RESULT length=%d\n",length);
+					DEBUG("udp sendto SNAV_TASK_GET_SNAV_PROXY_VERSION_RETURN length=%d\n",length);
 
 					continue;
+				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_GET_LINARO_VERSION) == 0))
+				{
+					FILE *version_fp;
+					char expected_version[64];
+
+					if ((version_fp = fopen("/etc/systeminfo.cfg", "r")) != NULL)
+					{
+						int i=0;
+
+						while(fgets(expected_version,sizeof(expected_version),version_fp)!=NULL)
+						{
+							DEBUG("linaro version:%s\n",expected_version);
+						}
+
+						fclose(version_fp);
+					}
+
+					if (expected_version[strlen(expected_version)-1] == '\n')
+					{
+						expected_version[strlen(expected_version)-1] = '\0';
+					}
+
+					memset(result_to_client,0,MAX_BUFF_LEN);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_LINARO_VERSION_RETURN);
+
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, expected_version);
+
+					DEBUG("udp sendto SNAV_TASK_GET_LINARO_VERSION_RETURN result_to_client=%s\n",result_to_client);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_TASK_GET_LINARO_VERSION_RETURN length=%d\n",length);
+
+					continue;
+				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_GET_SNAV_VERSION) == 0))
+				{
+					//check current version	print $2,$3
+					char get_version_cmd[128] = "dpkg -l snav-dev | tail -n 1 | awk '{print $3}'";
+					char current_version[64];
+
+				  	FILE *fp = popen(get_version_cmd, "r");
+			        fgets(current_version, sizeof(current_version), fp);
+			        DEBUG("Current snav version%s", current_version);
+			        pclose(fp);
+
+					if (current_version[strlen(current_version)-1] == '\n')
+					{
+						current_version[strlen(current_version)-1] = '\0';
+					}
+
+					memset(result_to_client,0,MAX_BUFF_LEN);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_SNAV_VERSION_RETURN);
+
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, current_version);
+
+
+					DEBUG("udp sendto SNAV_TASK_GET_SNAV_VERSION_RETURN result_to_client=%s\n",result_to_client);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_TASK_GET_SNAV_VERSION_RETURN length=%d\n",length);
+
+					continue;
+				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_GET_QCAM_VERSION) == 0))
+				{
+					//check current version	print $2,$3
+					char get_version_cmd[128] = "dpkg -l mm-video | tail -n 1 | awk '{print $3}'";
+					char current_version[64];
+
+				  	FILE *fp = popen(get_version_cmd, "r");
+			        fgets(current_version, sizeof(current_version), fp);
+			        DEBUG("Current qcam version%s", current_version);
+			        pclose(fp);
+
+					if (current_version[strlen(current_version)-1] == '\n')
+					{
+						current_version[strlen(current_version)-1] = '\0';
+					}
+
+					memset(result_to_client,0,MAX_BUFF_LEN);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_QCAM_VERSION_RETURN);
+
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, current_version);
+
+					DEBUG("udp sendto SNAV_TASK_GET_QCAM_VERSION_RETURN result_to_client=%s\n",result_to_client);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_TASK_GET_QCAM_VERSION_RETURN length=%d\n",length);
+
+					continue;
+				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_GET_STORAGE) == 0))
+				{
+					char get_storage_total[128] = "df -h | grep -w '/' | head -n 1 | awk '{print $2}'";
+					char get_storage_free[128] = "df -h | grep -w '/' | head -n 1 | awk '{print $4}'";
+					char current_storage_total[128];
+					char current_storage_free[128];
+
+					memset(current_storage_total,0,128);
+					memset(current_storage_free,0,128);
+
+				  	FILE *fp_total = popen(get_storage_total, "r");
+			        fgets(current_storage_total, sizeof(current_storage_total), fp_total);
+			        DEBUG("Current total storage:%s", current_storage_total);
+			        pclose(fp_total);
+
+					FILE *fp_free = popen(get_storage_free, "r");
+			        fgets(current_storage_free, sizeof(current_storage_free), fp_free);
+			        DEBUG("Current free storage:%s", current_storage_free);
+			        pclose(fp_free);
+
+					if (current_storage_total[strlen(current_storage_total)-1] == '\n')
+					{
+						current_storage_total[strlen(current_storage_total)-1] = '\0';
+					}
+
+					if (current_storage_free[strlen(current_storage_free)-1] == '\n')
+					{
+						current_storage_free[strlen(current_storage_free)-1] = '\0';
+					}
+
+					memset(result_to_client,0,MAX_BUFF_LEN);
+					sprintf(result_to_client,"%s",SNAV_TASK_GET_STORAGE_RETURN);
+
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, current_storage_total);
+					strcat(result_to_client, STR_SEPARATOR);
+					strcat(result_to_client, current_storage_free);
+
+					DEBUG("udp sendto SNAV_TASK_GET_STORAGE_RETURN result_to_client=%s\n",result_to_client);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_TASK_GET_STORAGE_RETURN length=%d\n",length);
 				}
 				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare(SNAV_CMD_MODIFY_SSID_PWD) == 0))
 				{
@@ -1386,6 +1895,20 @@ int main(int argc, char* argv[])
 
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 					DEBUG("udp sendto SNAV_CMD_RETURN_PANORAMA length=%d\n",length);
+				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_CMD_MAG_CALIBRATE) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_MAG_CALIBRATE);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_CMD_RETURN_MAG_CALIBRATE length=%d\n",length);
+				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_CMD_HOR_CALIBRATE) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_CMD_RETURN_HOR_CALIBRATE);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_CMD_RETURN_HOR_CALIBRATE length=%d\n",length);
 				}
 				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_CMD_RETURN) == 0))
 				{
@@ -1429,6 +1952,20 @@ int main(int argc, char* argv[])
 					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
 					DEBUG("udp sendto SNAV_TASK_CONFIRM_LAND_RETURN length=%d\n",length);
 				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_SNAV_UPDATE) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_TASK_SNAV_UPDATE_RETURN);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_TASK_SNAV_UPDATE_RETURN length=%d\n",length);
+				}
+				else if ((gpsparams_udp.size() >= 1) && (gpsparams_udp[0].compare(SNAV_TASK_LINARO_UPDATE) == 0))
+				{
+					sprintf(result_to_client,"%s",SNAV_TASK_LINARO_UPDATE_RETURN);
+
+					length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+					DEBUG("udp sendto SNAV_TASK_LINARO_UPDATE_RETURN length=%d\n",length);
+				}
 				//for test
 				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare("speed_limit") == 0))
 				{
@@ -1439,6 +1976,11 @@ int main(int argc, char* argv[])
 				{
 					height_limit = atof(gpsparams_udp[1].c_str());
 					DEBUG("udp receive  height_limit=%f\n",height_limit);
+				}
+				else if ((gpsparams_udp.size() >= 2) && (gpsparams_udp[0].compare("stop_flag") == 0))
+				{
+					optic_flow_error_stop_flag = atoi(gpsparams_udp[1].c_str());
+					DEBUG("udp receive  optic_flow_error_stop_flag=%f\n",optic_flow_error_stop_flag);
 				}
 			}
 
@@ -1494,6 +2036,175 @@ int main(int argc, char* argv[])
 				system("hostapd -B /etc/hostapd.conf");
 			}
 
+			//update
+			if ((gpsparams_udp.size() >= 1)
+				&& (gpsparams_udp[0].compare(SNAV_TASK_SNAV_UPDATE) == 0)
+				&& (props_state == SN_PROPS_STATE_NOT_SPINNING)
+				&& (on_ground_flag == 1))
+			{
+				system("rm -rf /tmp/update-snav/");
+				system("chmod a+x /tmp/update-snav.zip");
+				system("tar zxvf /tmp/update-snav.zip -C /tmp/");
+				system("chmod -R 777 /tmp/update-snav/");
+				system("/tmp/update-snav/update.sh");
+			}
+
+			if ((gpsparams_udp.size() >= 1)
+				&& (gpsparams_udp[0].compare(SNAV_TASK_LINARO_UPDATE) == 0)
+				&& (props_state == SN_PROPS_STATE_NOT_SPINNING)
+				&& (on_ground_flag == 1))
+			{
+				// /home/linaro/update/
+				system("rm -rf /tmp/update-linaro/");
+				system("chmod a+x /tmp/update-linaro.zip");
+				system("install-update /tmp/update-linaro.zip");
+			}
+
+			//calibrate
+			if ((gpsparams_udp.size() >= 1)
+				&& (gpsparams_udp[0].compare(SNAV_CMD_MAG_CALIBRATE) == 0)
+				&& (props_state == SN_PROPS_STATE_NOT_SPINNING))
+			{
+				bool keep_going = true;
+				bool calib_started = false;
+				unsigned int attempt_number = 0;
+				const unsigned int kMaxAttempts = 10;
+				bool calib_result = false;
+
+				while(keep_going)
+				{
+					static unsigned int circle_counter = 0;
+
+					if (snav_data->general_status.current_mode == SN_MAGNETOMETER_CALIBRATION_MODE)
+					{
+						calib_started = true;
+						SnCalibStatus status;
+						sn_get_magnetometer_calibration_status(&status);
+						if (status == SN_CALIB_STATUS_CALIBRATION_IN_PROGRESS)
+						{
+							DEBUG("[%u] Magnetometer calibration is in progress\n",circle_counter);
+						}
+					}
+					else if (snav_data->general_status.current_mode == SN_CALIBRATION_SUCCESS && calib_started)
+					{
+						DEBUG("[%u] Magnetometer calibration was completed successfully\n",circle_counter);
+						keep_going = false;
+
+						calib_result = true;
+					}
+					else if (snav_data->general_status.current_mode == SN_CALIBRATION_FAILURE && calib_started)
+					{
+						DEBUG("[%u] Magnetometer calibration failed\n", circle_counter);
+						keep_going = false;
+
+						calib_result = false;
+					}
+					else
+					{
+						if (attempt_number < kMaxAttempts)
+						{
+							DEBUG("[%u] Sending command (attempt %u) to start magnetometer calibration\n",
+											circle_counter, attempt_number);
+							sn_start_magnetometer_calibration();
+							attempt_number++;
+						}
+						else
+						{
+							DEBUG("[%u] Unable to start calibration\n", circle_counter);
+							keep_going = false;
+						}
+					}
+
+					circle_counter++;
+    				usleep(100000);	//100ms
+
+					if (circle_counter >= 300)
+					{
+						DEBUG("[%u] MAG Calibrate TimeOut calib_result=%d\n", circle_counter,calib_result);
+						keep_going = false;
+					}
+				}
+
+				sprintf(result_to_client,"%s",SNAV_INFO_MAG_CALIBRATE_RESULT);
+				strcat(result_to_client, STR_SEPARATOR);
+				strcat(result_to_client, calib_result==true?"1":"0");
+
+				length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+				DEBUG("udp sendto SNAV_INFO_MAG_CALIBRATE_RESULT length=%d\n",length);
+			}
+
+			if ((gpsparams_udp.size() >= 1)
+				&& (gpsparams_udp[0].compare(SNAV_CMD_HOR_CALIBRATE) == 0)
+				&& (props_state == SN_PROPS_STATE_NOT_SPINNING))
+			{
+				bool keep_going = true;
+				bool calib_started = false;
+				unsigned int attempt_number = 0;
+				const unsigned int kMaxAttempts = 10;
+				bool calib_result = false;
+
+				while(keep_going)
+				{
+					static unsigned int circle_counter = 0;
+
+					if (snav_data->general_status.current_mode == SN_STATIC_ACCEL_CALIBRATION_MODE)
+					{
+						calib_started = true;
+						SnCalibStatus status;
+						sn_get_static_accel_calibration_status(&status);
+
+						if (status == SN_CALIB_STATUS_CALIBRATION_IN_PROGRESS)
+						{
+							DEBUG("[%u] Static accel calibration is in progress\n",circle_counter);
+						}
+					}
+					else if (snav_data->general_status.current_mode == SN_CALIBRATION_SUCCESS && calib_started)
+					{
+						DEBUG("[%u] Static accel calibration was completed successfully\n",circle_counter);
+						keep_going = false;
+
+						calib_result = true;
+					}
+					else if (snav_data->general_status.current_mode == SN_CALIBRATION_FAILURE && calib_started)
+					{
+						DEBUG("[%u] Static accel calibration failed\n", circle_counter);
+						keep_going = false;
+
+						calib_result = false;
+					}
+					else
+					{
+						if (attempt_number < kMaxAttempts)
+						{
+							DEBUG("[%u] Sending command (attempt %u) to start static accel calibration\n",
+													circle_counter, attempt_number);
+							sn_start_static_accel_calibration();
+							attempt_number++;
+						}
+						else
+						{
+							DEBUG("[%u] Unable to start calibration\n", circle_counter);
+							keep_going = false;
+						}
+					}
+
+					circle_counter++;
+    				usleep(100000);	//100ms
+
+					if (circle_counter >= 200)
+					{
+						DEBUG("[%u] HOR Calibrate TimeOut calib_result=%d\n", circle_counter,calib_result);
+						keep_going = false;
+					}
+				}
+
+				sprintf(result_to_client,"%s",SNAV_INFO_HOR_CALIBRATE_RESULT);
+				strcat(result_to_client, STR_SEPARATOR);
+				strcat(result_to_client, calib_result==true?"1":"0");
+
+				length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+				DEBUG("udp sendto SNAV_INFO_MAG_CALIBRATE_RESULT length=%d\n",length);
+			}
 
 			if ((gpsparams_udp.size() >= 2)
 				&& (gpsparams_udp[0].compare(SNAV_CMD_FACE_FOLLOW) == 0))
@@ -1509,6 +2220,7 @@ int main(int argc, char* argv[])
 					body_follow_switch = false;
 
 					send_face_follow_swither_flag = true;
+					memset(face_follow_swither_buff,0,DOMAIN_BUFF_SIZE);
 					strcpy(face_follow_swither_buff, "fdon");
 				}
 				else
@@ -1516,6 +2228,7 @@ int main(int argc, char* argv[])
 					face_follow_switch = false;
 
 					send_face_follow_swither_flag = true;
+					memset(face_follow_swither_buff,0,DOMAIN_BUFF_SIZE);
 					strcpy(face_follow_swither_buff, "fdoff");
 				}
 			}
@@ -1674,23 +2387,23 @@ int main(int argc, char* argv[])
 
 					if (trail_navigation_mission)
 					{
-
-						if (z_des - z_est_startup > fTrarilHeight)
+						//sonar data first when valid.
+						if (z_des - z_est_startup >= fTrarilHeight)
 						{
 							state = MissionState::LOITER;
 						}
-						else if(z_des - z_est_startup > 0.8f*fTrarilHeight)
+						else if(z_des - z_est_startup > 0.5f*fTrarilHeight)
 						{
 							z_vel_des = kTakeoffSpeed*0.5f;
 						}
 					}
 					else
 					{
-						if (z_des - z_est_startup > kDesTakeoffAlt)
+						if (z_des - z_est_startup >= kDesTakeoffAlt)
 						{
 							state = MissionState::LOITER;
 						}
-						else if(z_des - z_est_startup > 0.8f*kDesTakeoffAlt)
+						else if(z_des - z_est_startup > 0.5f*kDesTakeoffAlt)
 						{
 							z_vel_des = kTakeoffSpeed*0.5f;
 						}
@@ -1705,6 +2418,23 @@ int main(int argc, char* argv[])
 			{
 				if (props_state == SN_PROPS_STATE_SPINNING)
 				{
+					//reset all the mission
+					current_position =0;
+
+					circle_mission=false;
+					calcCirclePoint = false;
+
+					panorama_mission = false;
+					calcPanoramaPoint = false;
+
+					trail_navigation_mission = false;
+
+					return_mission = false;
+
+					face_mission=false;
+					body_mission=false;
+
+
 					// Command constant negative z velocity during landing
 					x_vel_des = 0;
 					y_vel_des = 0;
@@ -1764,6 +2494,8 @@ int main(int argc, char* argv[])
 				else
 				{
 					state = MissionState::ON_GROUND;
+
+					current_position =0;
 
 					circle_mission=false;
 					calcCirclePoint = false;
@@ -1827,7 +2559,7 @@ int main(int argc, char* argv[])
 						command_diff_yaw = command_diff_yaw+ 2*M_PI;
 					}
 
-					if (abs(command_diff_yaw)>M_PI*0.25f)
+					if (fabs(command_diff_yaw)>M_PI*0.25f)
 					{
 						state = MissionState::LOITER;
 						current_position =0;
@@ -1836,7 +2568,7 @@ int main(int argc, char* argv[])
 						continue;
 					}
 
-					if (abs(command_diff_yaw)<0.03)
+					if (fabs(command_diff_yaw)<0.03)
 					{
 						// Close enough, move on
 						current_position++;
@@ -1927,7 +2659,7 @@ int main(int argc, char* argv[])
 						command_diff_yaw = command_diff_yaw+ 2*M_PI;
 					}
 
-					if (abs(command_diff_yaw)>M_PI*0.25f)
+					if (fabs(command_diff_yaw)>M_PI*0.25f)
 					{
 						state = MissionState::LOITER;
 						current_position =0;
@@ -1945,7 +2677,7 @@ int main(int argc, char* argv[])
 						distance_to_dest = 0.01;
 					}  //to prevent dividing by zero
 
-					//if(distance_to_dest<0.04)	//&& abs(command_diff_yaw) <angle_per
+					//if(distance_to_dest<0.04)	//&& fabs(command_diff_yaw) <angle_per
 					if(distance_to_dest<0.06)
 					{
 						// Close enough, move on
@@ -2028,15 +2760,30 @@ int main(int argc, char* argv[])
 					{
 						angle_face_offset = cur_body.angle*M_PI/180;
 
-						if(abs(angle_face_offset) > min_angle_offset && face_rotate_switch)
+						if(fabs(angle_face_offset) > min_angle_offset && face_rotate_switch)
 						{
-							distance_remain_x = 0;
-							distance_remain_y = 0;
-							distance_remain_z = 0;
-							vel_yaw_target = angle_face_offset*vel_target*1.5;
+							if(cur_body.distance >(safe_distance -0.2f))
+							{
+								distance_remain_x = 0;
+								distance_remain_y = 0;
+								distance_remain_z = 0;
+								vel_yaw_target = angle_face_offset*1.5;
+							}
+							else  // too close back first
+							{
+							    forword_dis = cur_body.distance-safe_distance;
+								parallel_dis = 0;
+								distance_to_dest = sqrt(forword_dis*forword_dis + parallel_dis*parallel_dis);
 
-							DEBUG("[%d] face_mission angle_face_offset: [%f] \n",
-									loop_counter,angle_face_offset);
+								DEBUG("[%d] face_mission newP [forword_dis parallel_dis distance_to_dest ]: [%f %f %f]\n",
+											loop_counter,forword_dis,parallel_dis,distance_to_dest);
+
+								distance_remain_x = cos(yaw_est)*forword_dis-sin(yaw_est)*parallel_dis;
+								distance_remain_y = sin(yaw_est)*forword_dis+cos(yaw_est)*parallel_dis;
+								distance_remain_z = 0;
+								vel_yaw_target = 0;
+							}
+
 						}
 						else
 						{
@@ -2056,12 +2803,12 @@ int main(int argc, char* argv[])
 						cur_body.newP = false;
 					}
 
-					if(((abs(angle_face_offset))< min_angle_offset && abs(distance_to_dest) <0.05f)
+					if(((fabs(angle_face_offset))< min_angle_offset && fabs(distance_to_dest) <0.05f)
 						|| !cur_body.have_face)
 					{
-						if(abs(distance_remain_z) > 0.1f)
+						if(fabs(distance_remain_z) > 0.1f)
 						{
-							vel_z_target = distance_remain_z*vel_target*1.5;
+							vel_z_target = distance_remain_z*vel_target;
 							if(vel_z_target >vel_target) vel_z_target =vel_target;
 						}
 						else
@@ -2085,19 +2832,29 @@ int main(int argc, char* argv[])
 					DEBUG("[%d] face_mission [distance_remain_x distance_remain_y,distance_remain_z]: [%f %f %f]\n",
 							loop_counter,distance_remain_x,distance_remain_y,distance_remain_z);
 
-					if(abs(distance_remain_x) <0.05f)
+					if(fabs(distance_remain_x) <0.05f)
 						distance_remain_x =0;
-					if(abs(distance_remain_y) <0.05f)
+					if(fabs(distance_remain_y) <0.05f)
 						distance_remain_y =0;
-					if(abs(distance_remain_z) < 0.1f)
+					if(fabs(distance_remain_z) < 0.1f)
 						distance_remain_z =0;
 
-					if(abs(distance_to_dest) >0.05f)
+					if(fabs(distance_to_dest) >0.05f)
 					{
-						vel_x_target = distance_remain_x* vel_target*1.5;
-						vel_y_target = distance_remain_y* vel_target*1.5;
-						if(vel_x_target >vel_target) vel_x_target =vel_target;
-						if(vel_y_target >vel_target) vel_y_target =vel_target;
+						if(forword_dis <0)
+						{
+						    vel_x_target = distance_remain_x*face_vel_limit*2.5f;
+						    vel_y_target = distance_remain_y*face_vel_limit*2.5f;
+						}
+						else{
+						    vel_x_target = distance_remain_x*face_vel_limit;
+						    vel_y_target = distance_remain_y*face_vel_limit;
+						}
+
+						if(vel_x_target >face_vel_limit) vel_x_target =face_vel_limit;
+						if(vel_y_target >face_vel_limit) vel_y_target =face_vel_limit;
+						if(vel_x_target < -1*face_vel_limit) vel_x_target =-1*face_vel_limit;
+						if(vel_y_target < -1*face_vel_limit) vel_y_target =-1*face_vel_limit;
 					}
 					else
 					{
@@ -2105,16 +2862,16 @@ int main(int argc, char* argv[])
 						vel_y_target = 0;
 					}
 
-					if(abs(distance_remain_z) > 0.1f)
+					if(fabs(distance_remain_z) > 0.1f)
 					{
 						vel_z_target = distance_remain_z*vel_target;
-						if(vel_z_target >vel_target) vel_z_target =vel_target;
+						if(vel_z_target >vel_target) vel_z_target = vel_target;
 					}
 					else
 						vel_z_target = 0;
 
-					if(vel_yaw_target >0.75f)
-						vel_yaw_target = 0.75f;
+					if(vel_yaw_target > M_PI*0.5f)
+						vel_yaw_target = M_PI*0.5f;
 
 					DEBUG("[%d] face_mission [vel_x vel_y vel_z distance vel_yaw]: [%f %f %f %f %f]\n",
 						loop_counter,vel_x_target,vel_y_target,vel_z_target,distance_to_dest,vel_yaw_target);
@@ -2122,76 +2879,72 @@ int main(int argc, char* argv[])
 				else if(body_mission)
 				{
 					//static float f_dest_yaw,f_dest_x,f_dest_y;
-					static float distance_remain_x,distance_remain_y;
-					static float forword_dis , parallel_dis,angle_face_offset;
+					static float speed ,angle_body_offset;
+					angle_body_offset = cur_body.angle*M_PI/180;
 
-					if(cur_body.newP)
-					{
-						forword_dis = cur_body.distance-safe_distanceB;
-						angle_face_offset = cur_body.angle*M_PI/180;
+					speed = sqrt(vel_x_des_sent*vel_x_des_sent +vel_y_des_sent*vel_y_des_sent);
 
-						parallel_dis = tan(angle_face_offset)*cur_body.distance;
-
-						distance_to_dest = sqrt(forword_dis*forword_dis + parallel_dis*parallel_dis);
-
-						DEBUG(" [%d] body_mission newP [forword_dis parallel_dis distance_to_dest ]: [%f %f %f]\n",
-								loop_counter,forword_dis,parallel_dis,distance_to_dest);
-
-						distance_remain_x = cos(yaw_est)*forword_dis-sin(yaw_est)*parallel_dis;
-						distance_remain_y = sin(yaw_est)*forword_dis+cos(yaw_est)*parallel_dis;
-
-						cur_body.newP = false;
-					}
-
-					if(((abs(angle_face_offset))< min_angle_offset && abs(distance_to_dest) <0.15f)
-						|| (!cur_body.have_body) )
+					if((fabs(angle_body_offset)< min_angle_offset && cur_body.velocity <0.05f)
+						|| !cur_body.have_body)
 					{
 						state = MissionState::LOITER;
-						DEBUG("body_mission follow face-> LOITER\n" );
-						face_mission = false;
+						DEBUG("body_mission follow body-> LOITER\n");
+						body_mission = false;
 						continue;
 					}
 
-					vel_yaw_target = 0;
-
-					distance_remain_x = distance_remain_x - vel_x_des_sent*0.02f; //20ms a tick
-					distance_remain_y = distance_remain_y - vel_y_des_sent*0.02f;
-
-					distance_to_dest = sqrt(distance_remain_x*distance_remain_x +
-											 distance_remain_y*distance_remain_y);
-
-					DEBUG(" [%d] body_mission [distance_remain_x distance_remain_y]: [%f %f]\n",
-							loop_counter,distance_remain_x,distance_remain_y);
-
-					if(abs(distance_remain_x) <0.05f)
-						distance_remain_x =0;
-					if(abs(distance_remain_y) <0.05f)
-						distance_remain_y =0;
-
-
-					if(abs(distance_to_dest) >0.05f)
+					if(fabs(angle_body_offset) > min_angle_offset)
 					{
-						vel_x_target = distance_remain_x* vel_target*1.5;
-						vel_y_target = distance_remain_y* vel_target*1.5;
-						if(vel_x_target >vel_target) vel_x_target =vel_target;
-						if(vel_y_target >vel_target) vel_y_target =vel_target;
+						vel_yaw_target = angle_body_offset*vel_target*1.5;
+						vel_x_target =0;
+						vel_y_target =0;
+						vel_z_target =0;
+						DEBUG(" [%d] follow body_mission [vel_x_target vel_y_target vel_yaw_target]: [%f %f %f]\n",
+							loop_counter,vel_x_target,vel_y_target,vel_yaw_target);
 					}
 					else
 					{
-						vel_x_target = 0;
-						vel_y_target = 0;
+					    vel_yaw_target = 0;
+
+						//DEBUG("[%d] body_mission angle_body_offset: [%f] \n",
+						//		loop_counter,angle_body_offset);
+
+						float curheight = z_est-z_est_startup;
+						float sonarheight = snav_data->sonar_0_raw.range;
+						if(sonarheight > 1.0f && sonarheight < 2.5f)
+							curheight = sonarheight;
+
+						DEBUG("[%d] body_mission angle_body_offset: [%f] curheight:%f,sonarheight:%f\n",
+								loop_counter,angle_body_offset,curheight,sonarheight);
+
+						if( true/*curheight>1.9f && curheight <2.1f*/)
+						{
+							vel_x_target = cos(yaw_est)*cur_body.velocity;
+							vel_y_target = sin(yaw_est)*cur_body.velocity;
+							vel_z_target =0;
+
+							if(vel_x_target >body_speed_limit)
+								vel_x_target = body_speed_limit;
+
+							if(vel_y_target >body_speed_limit)
+								vel_y_target = body_speed_limit;
+
+							DEBUG(" [%d] follow body_mission [vel_x_target vel_y_target vel_yaw_target]: [%f %f %f]\n",
+							loop_counter,vel_x_target,vel_y_target,vel_yaw_target);
+						}
+						else
+						{
+							vel_x_target = 0;
+							vel_y_target = 0;
+							vel_z_target = (2.0f - curheight)*vel_target*1.5;
+
+							if(vel_z_target >0.75f)vel_z_target = 0.75;
+							DEBUG(" [%d]  body_mission correct height [vel_z_target curheight vel_yaw_target]: [%f %f %f]\n",
+							loop_counter,vel_z_target,curheight,vel_yaw_target);
+						}
 					}
-
-					/*command_diff_z = kDesTakeoffAlt - (z_des-z_est_startup);
-
-					if(abs(command_diff_z)>0.05)
-						vel_z_target = command_diff_z/kDesTakeoffAlt * vel_target;
-					else
-						vel_z_target =0;*/
-
-					DEBUG(" [%d]  body_mission [vel_x_target vel_y_target distance_to_dest vel_yaw_target]: [%f %f %f %f]\n",
-						loop_counter,vel_x_target,vel_y_target,distance_to_dest,vel_yaw_target);
 				}//cuiyc add face detect end
+
 
 
 				//return mission
@@ -2201,19 +2954,19 @@ int main(int argc, char* argv[])
 					{
 						// Go to home waypoint
 						goto_waypoint({x_des, y_des, z_des, yaw_des}, {x_est_startup, y_est_startup, z_des, yaw_des},
-										{gohome_x_vel_des, gohome_y_vel_des, gohome_z_vel_des, gohome_yaw_vel_des}, &output_vel, &wp_goal);
+										{gohome_x_vel_des, gohome_y_vel_des, gohome_z_vel_des, gohome_yaw_vel_des}, true,&output_vel, &wp_goal_ret);
 						gohome_x_vel_des = output_vel.x;
 				        gohome_y_vel_des = output_vel.y;
 				        gohome_z_vel_des = output_vel.z;
 				        gohome_yaw_vel_des = output_vel.yaw;
 
-						DEBUG("[%d]:return_mission direct fly_home wp_goal,gohome_x_vel_des,gohome_y_vel_des,gohome_z_vel_des,gohome_yaw_vel_des:[%f,%f,%f,%f]\n",
+						DEBUG("[%d]:return_mission direct fly_home wp_goal_ret,gohome_x_vel_des,gohome_y_vel_des,gohome_z_vel_des,gohome_yaw_vel_des:[%f,%f,%f,%f]\n",
 									loop_counter,gohome_x_vel_des,gohome_y_vel_des,gohome_z_vel_des,gohome_yaw_vel_des);
 
-						if (wp_goal == true)
+						if ((wp_goal_ret&wp_goal_mask) == 0)
 				        {
 							// If home, enter landing
-							wp_goal = false;
+							wp_goal_ret = 0b11111111;
 							state = MissionState::LANDING;
 							return_mission = false;
 
@@ -2228,19 +2981,19 @@ int main(int argc, char* argv[])
 					else
 					{
 						goto_waypoint({x_des, y_des, z_des, yaw_des}, {x_des, y_des, z_des, yaw_target_home},
-            							{gohome_x_vel_des, gohome_y_vel_des, gohome_z_vel_des, gohome_yaw_vel_des}, &output_vel, &wp_goal);
+            							{gohome_x_vel_des, gohome_y_vel_des, gohome_z_vel_des, gohome_yaw_vel_des}, true,&output_vel, &wp_goal_ret);
 						gohome_x_vel_des = output_vel.x;
 				        gohome_y_vel_des = output_vel.y;
 				        gohome_z_vel_des = output_vel.z;
 				        gohome_yaw_vel_des = output_vel.yaw;
 
-						DEBUG("[%d]:return_mission fly_raw wp_goal,gohome_x_vel_des,gohome_y_vel_des,gohome_z_vel_des,gohome_yaw_vel_des:[%f,%f,%f,%f]\n",
+						DEBUG("[%d]:return_mission fly_raw wp_goal_ret,gohome_x_vel_des,gohome_y_vel_des,gohome_z_vel_des,gohome_yaw_vel_des:[%f,%f,%f,%f]\n",
 									loop_counter,gohome_x_vel_des,gohome_y_vel_des,gohome_z_vel_des,gohome_yaw_vel_des);
 
-						if (wp_goal == true)
+						if ((wp_goal_ret&wp_goal_mask) == 0)
 				        {
 							// If waypoint is reached (facing home), enter Fly_home
-							wp_goal = false;
+							wp_goal_ret = 0b11111111;
 
 							fly_home = true;
 						}
@@ -2490,8 +3243,8 @@ int main(int argc, char* argv[])
 						face_offset = M_PI*cur_body.angle/180;
 						DEBUG("followme have_face\n" );
 
-						if(abs(face_offset) >min_angle_offset || abs(cur_body.distance -safe_distance) >0.05
-							|| abs(cur_body.hegith_calib)>0.1)
+						if(fabs(face_offset) >min_angle_offset || fabs(cur_body.distance -safe_distance) >0.05
+							|| fabs(cur_body.hegith_calib)>0.1)
 						{
 							face_mission = true;
 							state = MissionState::TRAJECTORY_FOLLOW;
@@ -2507,12 +3260,12 @@ int main(int argc, char* argv[])
 						body_offset = M_PI*cur_body.angle/180;
 						DEBUG("followme have_body\n" );
 
-						if(abs(body_offset)>min_angle_offset || abs(cur_body.distance-safe_distanceB)>0.25f)
+						if(fabs(body_offset)>min_angle_offset || fabs(cur_body.velocity)>0.05f)
 						{
 							body_mission= true;
 							state = MissionState::TRAJECTORY_FOLLOW;
 							entering_loiter = true;
-							DEBUG("face_offset:%f	distance:%f\n",body_offset,cur_body.distance);
+							DEBUG("body angle:%f	velocity:%f\n",cur_body.angle,cur_body.velocity);
 							DEBUG("followme have_body LOITER -> BODY_FOLLOW\n" );
 						}
 					}//cuiyc add face detect end
@@ -2768,6 +3521,9 @@ int main(int argc, char* argv[])
 			//sn_send_rc_command(SN_RC_GPS_POS_HOLD_CMD, RC_OPT_LINEAR_MAPPING,
 			//sn_send_rc_command(SN_RC_OPTIC_FLOW_POS_HOLD_CMD, RC_OPT_LINEAR_MAPPING,
 
+			if(body_follow_switch && cmd0 != 0)cmd1 =0; //cuiyc add for people follow
+			if(face_follow_switch && (cmd0 != 0 || cmd1 != 0))cmd2 = 0;
+
 			DEBUG("[sn_send_rc_command cmd0 cmd1 cmd2 cmd3]: [%f,%f,%f,%f]\n",cmd0,cmd1,cmd2,cmd3);
 
 			//limit the speed when higher than 5m
@@ -2803,7 +3559,9 @@ int main(int argc, char* argv[])
 			}
 
 			//for limit optic flow get none smaple_size
-			if (t_optic_flow_now - t_optic_flow_start > 2)
+			if ((t_optic_flow_now - t_optic_flow_start > 2)
+				&& (state == MissionState::TRAJECTORY_FOLLOW
+					|| state == MissionState::LOITER))
 			{
 				cmd0 = 0;
 				cmd1 = 0;
@@ -2814,6 +3572,11 @@ int main(int argc, char* argv[])
 				memset(result_to_client,0,MAX_BUFF_LEN);
 				memcpy(result_to_client, SNAV_INFO_OPTIC_FLOW_MISS_SAMPLE, MAX_BUFF_LEN);
 				length=sendto(server_udp_sockfd,result_to_client,strlen(result_to_client),0,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr));
+
+				if (optic_flow_error_stop_flag == 1)
+				{
+					system("stop snav");
+				}
 			}
 
 			//limit the height
@@ -2876,8 +3639,6 @@ int main(int argc, char* argv[])
 				}
 			}
 			*/
-
-
 
 			sn_send_rc_command(curSendMode, RC_OPT_LINEAR_MAPPING,
 			         cmd0, cmd1, cmd2, cmd3);

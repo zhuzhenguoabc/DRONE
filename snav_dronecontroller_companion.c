@@ -100,12 +100,24 @@ int main(int argc, char* argv[])
   my_addr.sin_port = htons(port);  // short, network byte order
   memset(&(my_addr.sin_zero), '\0', 8); // zero the rest of the struct
 
+  const int kMaxNumAttempts = 10;
   printf("Using IP %s and port %d\n", ip_address, port);
-  if (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) == -1)
+  while (bind(sockfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) != 0)
   {
-    perror("bind");
-    exit(1);
+    static int attempt_number = 0;
+    printf("Attempt %d to bind to IP %s and port %d was unsuccessful\n", attempt_number,
+        ip_address, port);
+
+    if (attempt_number >= kMaxNumAttempts)
+    {
+      printf("Unable to bind after %d attempts.\n", attempt_number);
+      return -1;
+    }
+
+    ++attempt_number;
+    usleep(1e6);
   }
+  printf("Bound to IP %s and port %d\n", ip_address, port);
 
   addr_len = sizeof(struct sockaddr);
 

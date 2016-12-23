@@ -49,9 +49,10 @@ int main(int argc, char* argv[])
   GoHomeState state = GoHomeState::HOME_NOT_OK;
   bool mission_in_progress = true;
   int loop_counter = 0;
-  bool wp_goal=false;
   float yaw_target_home, distance_home_squared;
   float x_vel_des, y_vel_des, z_vel_des, yaw_vel_des;
+  uint8_t wp_goal_ret = 0b11111111;
+  uint8_t wp_goal_mask = 0b11111111;
 
   FlatVars output_vel;
 
@@ -78,48 +79,33 @@ int main(int argc, char* argv[])
     }
     else
     {
-      // Ensure gps is disabled for this mode. Currently, the desired position
-      // will be wrong for optic flow control if GPS is enabled.
-      int gps_enabled;
-      sn_is_gps_enabled(&gps_enabled);
-      if(gps_enabled != 0)
-      {
-        printf("Error: GPS enabled. Desired state will be incorrect for optic flow modes\n");
-        state = GoHomeState::HOME_NOT_OK;
-        mission_in_progress = false;
-        continue;
-      }
 
       // Get the current mode
-      SnMode mode;
-      sn_get_mode(&mode);
+      SnMode mode = (SnMode)(cached_data->general_status.current_mode);
 
       // Get the source of the RC input (spektrum vs API) here
       SnRcCommandSource rc_cmd_source = (SnRcCommandSource)(cached_data->rc_active.source);
 
       // Get the current state of the propellers
-      SnPropsState props_state;
-      sn_get_props_state(&props_state);
+      SnPropsState props_state = (SnPropsState)(cached_data->general_status.props_state);
 
       // Get the "on ground" flag
-      int on_ground_flag;
-      sn_get_on_ground_flag(&on_ground_flag);
+      int on_ground_flag = (cached_data->general_status.on_ground);
 
       // Get the current estimated position and yaw
-      float x_est, y_est, z_est, yaw_est;
-      sn_get_position_est(&x_est, &y_est, &z_est);
-      sn_get_yaw_est(&yaw_est);
+      float x_est = (cached_data->optic_flow_pos_vel.position_estimated[0]);
+      float y_est = (cached_data->optic_flow_pos_vel.position_estimated[1]);
+      float z_est = (cached_data->optic_flow_pos_vel.position_estimated[2]);
+      float yaw_est = (cached_data->optic_flow_pos_vel.yaw_estimated);
 
       // Get the current desired position and yaw
-      // NOTE this is the setpoint that will be controlled by sending
-      // velocity commands
-      float x_des, y_des, z_des, yaw_des;
-      sn_get_position_des(&x_des, &y_des, &z_des);
-      sn_get_yaw_des(&yaw_des);
+      float x_des = (cached_data->optic_flow_pos_vel.position_desired[0]);
+      float y_des = (cached_data->optic_flow_pos_vel.position_desired[1]);
+      float z_des = (cached_data->optic_flow_pos_vel.position_desired[2]);
+      float yaw_des = (cached_data->optic_flow_pos_vel.yaw_desired);
 
       // Get the current battery voltage
-      float voltage;
-      sn_get_voltage(&voltage);
+      float voltage = (cached_data->general_status.voltage);
 
       // Distance and direction from current position to home
       distance_home_squared = (x_est_startup-x_est)*(x_est_startup-x_est)+(y_est_startup-y_est)*(y_est_startup-y_est);
@@ -176,17 +162,18 @@ int main(int argc, char* argv[])
       {
         // Go to waypoint that is in the same xyz position, but facing home
         goto_waypoint({x_des, y_des, z_des, yaw_des}, {x_des, y_des, z_des, yaw_target_home},
-            {x_vel_des, y_vel_des, z_vel_des, yaw_vel_des}, &output_vel, &wp_goal);
+            {x_vel_des, y_vel_des, z_vel_des, yaw_vel_des}, true, &output_vel, &wp_goal_ret);
 
         x_vel_des = output_vel.x;
         y_vel_des = output_vel.y;
         z_vel_des = output_vel.z;
         yaw_vel_des = output_vel.yaw;
 
-        if (wp_goal == true)
+
+        if ((wp_goal_ret&wp_goal_mask) == 0)
         {
+          wp_goal_ret = 0b11111111;
           // If waypoint is reached (facing home), enter Fly_home
-          wp_goal = false;
           state = GoHomeState::FLY_HOME;
         }
         if (rc_cmd_source == SN_RC_CMD_API_INPUT)
@@ -197,25 +184,26 @@ int main(int argc, char* argv[])
         {
           // If switched out of go_home, enter home_ok state
           state = GoHomeState::HOME_OK;//HOME_OK;
-          wp_goal = false;
+          wp_goal_ret = 0b11111111;
         }
 
       }
       else if (state == GoHomeState::FLY_HOME)
       {
         // Go to home waypoint
-        goto_waypoint({x_des, y_des, z_des, yaw_des}, {x_est_startup, y_est_startup, z_des, yaw_des}, {x_vel_des, y_vel_des, z_vel_des, yaw_vel_des}, &output_vel, &wp_goal);
+        goto_waypoint({x_des, y_des, z_des, yaw_des}, {x_est_startup, y_est_startup, z_des, yaw_des},
+                      {x_vel_des, y_vel_des, z_vel_des, yaw_vel_des}, true, &output_vel, &wp_goal_ret);
 
         x_vel_des = output_vel.x;
         y_vel_des = output_vel.y;
         z_vel_des = output_vel.z;
         yaw_vel_des = output_vel.yaw;
 
-        if (wp_goal == true)
+        if ((wp_goal_ret&wp_goal_mask) == 0)
         {
           // If home, enter landing
           state = GoHomeState::LANDING;
-          wp_goal = false;
+          wp_goal_ret = 0b11111111;
         }
         if (rc_cmd_source == SN_RC_CMD_API_INPUT)
         {
@@ -225,7 +213,7 @@ int main(int argc, char* argv[])
         {
           // If switched out of go_home, enter home_ok state
           state = GoHomeState::HOME_OK;
-          wp_goal = false;
+          wp_goal_ret = 0b11111111;
         }
 
       }
