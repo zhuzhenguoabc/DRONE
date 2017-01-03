@@ -1,0 +1,22 @@
+# Copyright (c) 2015 Qualcomm Technologies, Inc.  All Rights Reserved.
+# Qualcomm Technologies Proprietary and Confidential.
+
+CC = arm-linux-gnueabihf-gcc
+CXX = arm-linux-gnueabihf-g++
+
+CFLAGS = -Wall
+CXXFLAGS = -Wall -std=c++0x
+
+TARGET = ota
+
+all: $(TARGET)
+
+% : %.cpp 
+	$(CXX) $(CXXFLAGS)  $< -o $@ 
+	
+% : %.c 
+	$(CC) $(CFLAGS)   $< -o $@ 
+
+clean:
+	rm -f $(TARGET)
+

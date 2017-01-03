@@ -48,7 +48,7 @@ using namespace std;
 
 #define DOMAIN_BUFF_SIZE						16
 
-#define VERSION_NUM 							"1.0.6"
+#define VERSION_NUM 							"1.0.7"
 #define STR_SEPARATOR  							","
 
 
@@ -225,9 +225,11 @@ static char body_follow_swither_buff[DOMAIN_BUFF_SIZE];
 
 
 
-static bool send_ota_flag = false;
-static char ota_path_buff[DOMAIN_BUFF_SIZE];
+static bool send_ota_linaro_flag = false;
+static char ota_linaro_path_buff[DOMAIN_BUFF_SIZE];
 
+static bool send_ota_snav_flag = false;
+static char ota_snav_path_buff[DOMAIN_BUFF_SIZE];
 
 
 typedef struct
@@ -583,12 +585,22 @@ void* communicateWithOta(void*)
 
 	while(true)
 	{
-		if (send_ota_flag)
+		if (send_ota_linaro_flag)
 		{
-			send_num = sendto(socket_cli, ota_path_buff, strlen(ota_path_buff), 0, (struct sockaddr*)&address, sizeof(address));
-			DEBUG("ota_path_buff=%s send_num=%d\n", ota_path_buff,send_num);
-			send_ota_flag = false;
+			//just need a signal, content is not necessary
+			send_num = sendto(socket_cli, ota_linaro_path_buff, strlen(ota_linaro_path_buff), 0, (struct sockaddr*)&address, sizeof(address));
+			DEBUG("ota_linaro_path_buff=%s send_num=%d\n", ota_linaro_path_buff,send_num);
+			send_ota_linaro_flag = false;
 		}
+
+		if (send_ota_snav_flag)
+		{
+			//just need a signal, content is not necessary
+			send_num = sendto(socket_cli, ota_snav_path_buff, strlen(ota_snav_path_buff), 0, (struct sockaddr*)&address, sizeof(address));
+			DEBUG("ota_snav_path_buff=%s send_num=%d\n", ota_snav_path_buff,send_num);
+			send_ota_snav_flag = false;
+		}
+
 		usleep(200000);		//200ms
 	}
 }
@@ -609,27 +621,8 @@ void* ledControl(void*)
 	int continue_blue_count = 0;
 	int continue_white_count = 0;
 
-	/*
-	SnavCachedData* snav_data = NULL;
-	if (sn_get_flight_data_ptr(sizeof(SnavCachedData), &snav_data) != 0)
-	{
-		DEBUG("Failed to get flight data pointer in ledControl!\n");
-		return 0;
-	}
-	*/
-
 	while (true)
 	{
-		/*
-		int update_ret = sn_update_data();  //need to do this at least once to make sure that SNAV is running
-
-		if (update_ret != 0)
-		{
-			DEBUG("sn_update_data failed in ledControl!\n");
-			continue;
-		}
-		*/
-
 		switch(led_color_status)
 		{
 			case LedColor::LED_COLOR_RED:
@@ -718,7 +711,7 @@ void* ledControl(void*)
 int main(int argc, char* argv[])
 {
 	/*
-	//only keep 5 log files
+	//only keep 5 log files named by current time
 	system("find /home/linaro/ -type f -name 'log_snav*'|xargs -r ls -lt|tail -n +5|awk '{print $9}'| xargs rm -rf");
 
 	time_t now;
@@ -741,11 +734,11 @@ int main(int argc, char* argv[])
 		if (fscanf(fp_count_read, "%d", &log_count) != EOF)
 		{
 			DEBUG("snav_proxy_count=%d\n", log_count);
-			if (log_count>=0)
+			if (log_count >= 0)
 			{
-				if (log_count>=8000)
+				if (log_count >= 8000)
 				{
-					log_count=0;
+					log_count = 0;
 				}
 				log_count++;
 			}
@@ -1594,6 +1587,7 @@ int main(int argc, char* argv[])
 							state = MissionState::LOITER;
 
 							// for pull back when stop suddenly from a high speed
+							/*
 							struct timeval t_val;
 							gettimeofday(&t_val, NULL);
 							double time_for_check = t_val.tv_sec + t_val.tv_usec * 1e-6;
@@ -1602,6 +1596,7 @@ int main(int argc, char* argv[])
 							last_valid_roll_time = time_for_check;
 							last_valid_pitch = cmd0;
 							last_valid_pitch_time = time_for_check;
+							*/
 
 							//DEBUG("[%d]:last_valid pitch,roll,time=%f,%f,%lf\n",loop_counter,cmd0,cmd1,time_for_check);
 						}
@@ -2163,11 +2158,17 @@ int main(int argc, char* argv[])
 				&& (props_state == SN_PROPS_STATE_NOT_SPINNING)
 				&& (on_ground_flag == 1))
 			{
+				/*
 				system("rm -rf /tmp/update-snav/");
 				system("chmod 777 /tmp/update-snav.zip");
 				system("tar xvf /tmp/update-snav.zip -C /tmp/");	//zxvf
 				system("chmod -R 777 /tmp/update-snav/");
 				system("/tmp/update-snav/update.sh");
+				*/
+
+				system("chmod 777 /tmp/update-snav.zip");
+				send_ota_snav_flag = true;
+				strcpy(ota_snav_path_buff, "/tmp/update-snav.zip");
 			}
 
 			if ((gpsparams_udp.size() >= 1)
@@ -2189,8 +2190,8 @@ int main(int argc, char* argv[])
 				*/
 
 				system("chmod 777 /tmp/update-linaro.zip");
-				send_ota_flag = true;
-				strcpy(ota_path_buff, "/tmp/update-linaro.zip");
+				send_ota_linaro_flag = true;
+				strcpy(ota_linaro_path_buff, "/tmp/update-linaro.zip");
 			}
 
 			//calibrate
