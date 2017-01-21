@@ -41,8 +41,7 @@ void print_sn_data_status_string(SnDataStatus status)
 
 int main(int argc, char* argv[])
 {
-  printf("\nSTART......\n");
-
+	printf("\n*****START*******\n");
   SnavCachedData* snav_data = NULL;
   if (sn_get_flight_data_ptr(sizeof(SnavCachedData), &snav_data) != 0)
   {
@@ -177,6 +176,10 @@ int main(int argc, char* argv[])
       // Get the battery voltage
       printf("电压 voltage = %f\n", snav_data->general_status.voltage);
 */
+	  // Get the snav version
+      char library_version[18];
+	  memset(library_version, 0, 18);
+	  memcpy(library_version, snav_data->version_info.library_version, 18);
       // Get the status of the IMU
       SnDataStatus imu_status = (SnDataStatus) snav_data->data_status.imu_0_status;
 	  // Get the baro status
@@ -191,6 +194,8 @@ int main(int argc, char* argv[])
       SnDataStatus sonar_status = (SnDataStatus) snav_data->data_status.sonar_0_status;
 	   // Get the optic flow status
       SnDataStatus optic_flow_status = (SnDataStatus) snav_data->data_status.optic_flow_0_status;
+	  // Get the esc status
+      SnDataStatus esc_feedback_status = (SnDataStatus) snav_data->data_status.esc_feedback_status;
 	  // Get static accel calib status
       SnCalibStatus static_accel_calib_status;
       sn_get_static_accel_calibration_status(&static_accel_calib_status);
@@ -207,18 +212,62 @@ int main(int argc, char* argv[])
       SnCalibStatus mag_calib_status;
       sn_get_magnetometer_calibration_status(&mag_calib_status);
 
+	  //check current version	print $2,$3
+	char get_wifi_ssid_cmd[128] = "cat /etc/hostapd.conf | grep ssid= | head -n 1 | cut -c6-";
+	char wifi_ssid[64];
+
+	FILE *fp = popen(get_wifi_ssid_cmd, "r");
+	fgets(wifi_ssid, sizeof(wifi_ssid), fp);
+	pclose(fp);
+
+	if (wifi_ssid[strlen(wifi_ssid)-1] == '\n')
+	{
+		wifi_ssid[strlen(wifi_ssid)-1] = '\0';
+	}
+
+      printf("\nWifi-Name		=		%s\n\n", wifi_ssid);
+
 	  printf("------------------------------------------------------------\n");
-      printf("1: imu_status        = ");
+      printf("Snav Version	=	%s\n", library_version);
+
+	  printf("------------------------------------------------------------\n");
+	  printf("1: imu_status	= %d -----------", imu_status);
+
 	  if (imu_status == SN_DATA_VALID)
-		printf("Pass\n");
+	  {
+		  if ((snav_data->imu_0_raw.lin_acc[0] >= -0.1f) && (snav_data->imu_0_raw.lin_acc[0] <= 0.1f)
+			   && (snav_data->imu_0_raw.lin_acc[1] >= -0.1f) && (snav_data->imu_0_raw.lin_acc[1] <= 0.1f)
+			   && (snav_data->imu_0_raw.lin_acc[2] >= 0.9f) && (snav_data->imu_0_raw.lin_acc[2] <= 1.1f)
+			 &&(snav_data->imu_0_raw.ang_vel[0] >= -0.1f) && (snav_data->imu_0_raw.ang_vel[0] <= 0.1f)
+			 && (snav_data->imu_0_raw.ang_vel[1] >= -0.1f) && (snav_data->imu_0_raw.ang_vel[1] <= 0.1f)
+			 && (snav_data->imu_0_raw.ang_vel[2] >= -0.1f) && (snav_data->imu_0_raw.ang_vel[2] <= 0.1f))
+		  {
+			  printf("Pass\n");
+		  }
+		  else
+		  {
+			pass_false_flag = 1;
+			printf("Fail003\n");
+		  }
+	  }
+	  else if (imu_status == SN_DATA_NOT_INITIALIZED)
+	  {
+		  pass_false_flag = 1;
+		  printf("Fail001\n");
+	  }
+      else if (imu_status == SN_DATA_UNCALIBRATED)
+      {
+		  pass_false_flag = 1;
+		  printf("Fail002\n");
+	  }
 	  else
 	  {
 		  pass_false_flag = 1;
-		  printf("Fail\n");
+		  printf("Fail004\n");
 	  }
 
 	printf("------------------------------------------------------------\n");
-	  printf("2: baro_status       = ");
+	  printf("2: baro_status = %d -----------", baro_status);
       //print_sn_data_status_string(baro_status);
 	  if (baro_status == SN_DATA_VALID)
 		printf("Pass\n");
@@ -241,27 +290,42 @@ int main(int argc, char* argv[])
 	  }*/
 
 	printf("------------------------------------------------------------\n");
-	  printf("3: mag_status        = ");
+	  printf("3: mag_status = %d -----------", mag_status);
       //print_sn_data_status_string(mag_status);
-	if ((mag_status == SN_DATA_VALID) || (mag_status == SN_DATA_NOT_INITIALIZED) || (mag_status == SN_DATA_WARNING))
-		printf("Pass\n");
-	  else
-		{
-		  pass_false_flag = 1;
-		  printf("Fail\n");
+      /*
+	  if ((mag_status == SN_DATA_VALID) || (mag_status == SN_DATA_WARNING))
+	  {
+		  printf("Pass\n");
 	  }
+	  else if (mag_status == SN_DATA_NOT_INITIALIZED)
+	  {
+		  pass_false_flag = 1;
+		  printf("Fail001\n");
+	  }
+	  else
+	  {
+		  pass_false_flag = 1;
+		  printf("Fail002\n");
+	  }
+	  */
+	  printf("Pass\n");
+
 	printf("------------------------------------------------------------\n");
-	  printf("4: gps_status        = ");
+	  printf("4: gps_status = %d -----------", gps_status);
       //print_sn_data_status_string(gps_status);
-	  if ((gps_status == SN_DATA_VALID)|| (mag_status == SN_DATA_NOT_INITIALIZED) || (mag_status == SN_DATA_NO_LOCK ))
+      /*
+	  if ((gps_status == SN_DATA_VALID)|| (gps_status == SN_DATA_NOT_INITIALIZED) || (gps_status == SN_DATA_NO_LOCK ))
 		printf("Pass\n");
 	  else
 		{
 		  pass_false_flag = 1;
 		  printf("Fail\n");
 	  }
+	  */
+	  printf("Pass\n");
+
 	printf("------------------------------------------------------------\n");
-	  printf("5: sonar_status      = ");
+	  printf("5: sonar_status = %d -----------", sonar_status);
       //print_sn_data_status_string(sonar_status);
 	  if (sonar_status == SN_DATA_VALID)
 		printf("Pass\n");
@@ -271,7 +335,7 @@ int main(int argc, char* argv[])
 		  printf("Fail\n");
 	  }
 	printf("------------------------------------------------------------\n");
-	  printf("6: optic_flow_status = ");
+	  printf("6: optic_flow_status = %d -----------", optic_flow_status);
       //print_sn_data_status_string(optic_flow_status);
 	  if (optic_flow_status == SN_DATA_VALID)
 		printf("Pass\n");
@@ -279,6 +343,29 @@ int main(int argc, char* argv[])
 		{
 		  pass_false_flag = 1;
 		  printf("Fail\n");
+	  }
+
+	printf("------------------------------------------------------------\n");
+	  printf("7: esc_feedback_status = %d -----------", esc_feedback_status);
+	  if (esc_feedback_status == SN_DATA_VALID)
+	  {
+		  if ((snav_data->esc_raw.voltage[0]>=6.0f && snav_data->esc_raw.voltage[0]<=8.5f)
+			  && (snav_data->esc_raw.voltage[1]>=6.0f && snav_data->esc_raw.voltage[1]<=8.5f)
+			  && (snav_data->esc_raw.voltage[2]>=6.0f && snav_data->esc_raw.voltage[2]<=8.5f)
+			  && (snav_data->esc_raw.voltage[3]>=6.0f && snav_data->esc_raw.voltage[3]<=8.5f))
+		  {
+			  printf("Pass\n");
+		  }
+		  else
+		  {
+			  pass_false_flag = 1;
+			  printf("Fail002\n");
+		  }
+	  }
+	  else
+	  {
+		  pass_false_flag = 1;
+		printf("Fail001\n");
 	  }
 	  /*
 	  printf("-----------------------------------------------------------------------------------------\n");
