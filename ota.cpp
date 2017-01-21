@@ -38,7 +38,7 @@ using namespace std;
 #endif
 
 
-struct timeval timeout_ota_udp = {0,300000};			//300ms
+struct timeval timeout_ota_udp = {0, 300000};			//300ms
 
 int main(int argc, char* argv[])
 {
@@ -47,14 +47,14 @@ int main(int argc, char* argv[])
 	int server_udp_len;
 	struct sockaddr_in server_udp_address;
 
-	server_udp_address.sin_family=AF_INET;
-	server_udp_address.sin_addr.s_addr=htonl(INADDR_ANY);
-	server_udp_address.sin_port=htons(OTA_UDP_PORT);
-	server_udp_len=sizeof(server_udp_address);
+	server_udp_address.sin_family = AF_INET;
+	server_udp_address.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_udp_address.sin_port = htons(OTA_UDP_PORT);
+	server_udp_len = sizeof(server_udp_address);
 
-	server_udp_sockfd=socket(AF_INET,SOCK_DGRAM,0);
+	server_udp_sockfd = socket(AF_INET,SOCK_DGRAM,0);
 
-	int bind_result = bind(server_udp_sockfd,(struct sockaddr*)&server_udp_address,server_udp_len);
+	int bind_result = bind(server_udp_sockfd, (struct sockaddr*)&server_udp_address, server_udp_len);
 
 	//300MS avoid of udp missing data
 	setsockopt(server_udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout_ota_udp, sizeof(struct timeval));
@@ -64,17 +64,17 @@ int main(int argc, char* argv[])
 	{
 		int length = 0;
 		struct sockaddr_in remote_addr;
-		int sin_size=sizeof(struct sockaddr_in);
+		int sin_size = sizeof(struct sockaddr_in);
 		char udp_buff_data[MAX_BUFF_LEN];
 
 		//receive the udp data
-		length=recvfrom(server_udp_sockfd,udp_buff_data,MAX_BUFF_LEN-1,0, (struct sockaddr *)&remote_addr,(socklen_t*)&sin_size);
+		length = recvfrom(server_udp_sockfd,udp_buff_data,MAX_BUFF_LEN-1,0, (struct sockaddr *)&remote_addr,(socklen_t*)&sin_size);
 
-		if (length>0)
+		if (length > 0)
 		{
-			DEBUG("udp recvfrom received data from %s,%d:\n",inet_ntoa(remote_addr.sin_addr), ntohs(remote_addr.sin_port));
-			udp_buff_data[length]='\0';
-			DEBUG("udp recvfrom get data udp_buff_data=%s\n",udp_buff_data);
+			DEBUG("udp recvfrom received data from %s,%d:\n", inet_ntoa(remote_addr.sin_addr),  ntohs(remote_addr.sin_port));
+			udp_buff_data[length] = '\0';
+			DEBUG("udp recvfrom get data udp_buff_data=%s\n", udp_buff_data);
 
 			if (strcmp(udp_buff_data, OTA_LINARO_PATH) == 0)
 			{
@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
 			DEBUG("udp recvfrom return length=%d, errno=%d\n", length, errno);
 		}
 	}
+
 	return 0;
 }
 
