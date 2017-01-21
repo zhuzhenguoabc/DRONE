@@ -17,7 +17,7 @@ LIBS = -lsnav_arm -ladsprpc -L./lib
 
 ##TARGET = snav_control_proxy_tcp  snav_control_proxy_udp
 ##TARGET = snav_test_receive_data_easy
-TARGET = snav_proxy
+TARGET = snav_proxy snav_waypoint_follow_ex snav_test_receive_data_easy
 
 all: $(TARGET)
 

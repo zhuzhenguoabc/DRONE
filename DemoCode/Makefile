@@ -17,7 +17,8 @@ TARGET = ${SNAV_DEV_LOCATION}/examples/snav_send_esc_commands  \
          ${SNAV_DEV_LOCATION}/examples/snav_dronecontroller_companion \
          ${SNAV_DEV_LOCATION}/examples/snav_go_home_optic_flow \
 	 ${SNAV_DEV_LOCATION}/examples/snav_waypoint_follow \
-	 ${SNAV_DEV_LOCATION}/examples/snav_send_led_colors
+	 ${SNAV_DEV_LOCATION}/examples/snav_send_led_colors \
+	 ${SNAV_DEV_LOCATION}/examples/snav_test_receive_data_easy
 
 all: $(TARGET)
 
